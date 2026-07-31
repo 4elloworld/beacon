@@ -37,6 +37,7 @@ router.post('/', async (req, res) => {
   // "Net Change". They have no date, and their balance figures are not income.
   // Counted as rows they invent properties and inflate every total, so drop them.
   const cleaned = rows.map(cleanRow).filter(isTransaction);
+  const skippedRows = rows.length - cleaned.length;
   const flags = runAnomalyDetection(cleaned);
 
   const byProperty = {};
@@ -106,7 +107,12 @@ router.post('/', async (req, res) => {
   const scanSteps = [
     {
       ico: '✓', type: 'ok', label: 'Reading transaction data',
-      sub: `${cleaned.length.toLocaleString()} rows detected across ${properties.length} ${properties.length === 1 ? 'property' : 'properties'}`,
+      // Account for every row that came in — a reader who totals the uploaded
+      // row counts should be able to reconcile them against this number.
+      sub: `${cleaned.length.toLocaleString()} transactions across ${properties.length} ${properties.length === 1 ? 'property' : 'properties'}`
+        + (skippedRows > 0
+            ? ` · ${skippedRows.toLocaleString()} account headers and totals skipped`
+            : ''),
     },
     {
       ico: '✓', type: 'ok', label: 'Mapping property addresses',
