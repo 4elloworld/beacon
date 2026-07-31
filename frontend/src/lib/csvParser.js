@@ -43,9 +43,11 @@ const REPORT_PATTERNS = {
   ],
 };
 
-// Reports Beacon can analyze today. Anything else is accepted and acknowledged,
-// but not merged into the portfolio.
-export const ANALYZABLE_REPORTS = ['general_ledger'];
+// Which report to analyze when several are uploaded, best first. The General
+// Ledger wins because it carries transaction detail every rule depends on; a
+// Cash Flow Detail is second because it at least parses. Property Performance is
+// a per-property summary with no transaction amounts, so it can never be primary.
+export const REPORT_PREFERENCE = ['general_ledger', 'cash_flow_detail'];
 
 export const REPORT_LABELS = {
   general_ledger: 'General Ledger',
@@ -54,7 +56,8 @@ export const REPORT_LABELS = {
   rent_roll: 'Rent Roll',
   income_register: 'Income Register',
   owner_expense_report: 'Owner Expense Report',
-  unknown: 'this file',
+  // No entry for 'unknown' on purpose — callers fall back to the filename, which
+  // identifies the file better than a generic phrase.
 };
 
 export function detectReportType(headers) {

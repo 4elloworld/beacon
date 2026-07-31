@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 import { DEMO_SCAN_STEPS } from '../lib/demoData.js';
-import { ANALYZABLE_REPORTS, REPORT_LABELS } from '../lib/csvParser.js';
+import { REPORT_PREFERENCE, REPORT_LABELS } from '../lib/csvParser.js';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -24,9 +24,14 @@ export default function Analyze({ onComplete, alreadyDone }) {
 
     const uploads = portfolioData?.uploads || [];
 
-    // Analyze the report Beacon reads best. A General Ledger wins even if it was
-    // dropped in second, so file order never decides which numbers the owner sees.
-    const primary = uploads.find(u => ANALYZABLE_REPORTS.includes(u.reportType)) || uploads[0];
+    // Analyze the best report present rather than whichever landed first, so file
+    // order never decides which numbers the owner sees — and a summary report
+    // never wins over one that actually carries transactions.
+    const rank = u => {
+      const i = REPORT_PREFERENCE.indexOf(u.reportType);
+      return i === -1 ? REPORT_PREFERENCE.length : i;
+    };
+    const primary = [...uploads].sort((a, b) => rank(a) - rank(b))[0];
 
     // Merge every upload of the same type — two ledgers covering different years
     // are one portfolio. Other reports are set aside rather than blended in.
@@ -44,26 +49,35 @@ export default function Analyze({ onComplete, alreadyDone }) {
           .then(data => {
             analysisResultRef.current = data?.isRealData ? data : null;
 
-            // Say what powered the numbers. A file we set aside is acknowledged
-            // by name — never silently dropped — but it isn't framed as a failure.
-            const messages = [];
-            const label = u => REPORT_LABELS[u.reportType] || REPORT_LABELS.unknown;
+            // Say what powered the numbers, once. Files set aside are named so
+            // they're never silently dropped, but listed together rather than
+            // repeating the same sentence per file.
+            const label = u => REPORT_LABELS[u.reportType] || u.filename;
+            const skipped = skippedRef.current;
+            const names = list =>
+              list.length === 1 ? label(list[0])
+              : list.length === 2 ? `${label(list[0])} and ${label(list[1])}`
+              : `${list.slice(0, -1).map(label).join(', ')}, and ${label(list[list.length - 1])}`;
+
+            let message = null;
 
             if (data && !data.isRealData) {
-              messages.push(
-                `Analyzed ${merged.length === 1 ? merged[0].filename : `${merged.length} files`}, but couldn't find the numbers. ${data.readError} Showing sample data below so you can still explore.`
-              );
-            } else if (merged.length > 1) {
-              messages.push(`Analyzed ${merged.length} ${label(primary)} files together as one portfolio.`);
+              // Nothing was analyzed, so don't cite the failed file as a source.
+              message = `Couldn't find the numbers in ${merged[0].filename}. ${data.readError}`
+                + (skipped.length ? ` ${names(skipped)} came through too, but Beacon can't read ${skipped.length === 1 ? 'it' : 'them'} yet.` : '')
+                + ` Showing sample data so you can still explore.`;
+            } else {
+              const parts = [];
+              if (merged.length > 1) {
+                parts.push(`Analyzed ${merged.length} ${label(primary)} files together as one portfolio.`);
+              }
+              if (skipped.length) {
+                parts.push(`${names(skipped)} received — these numbers come from your ${label(primary)}, which carries the transaction detail.`);
+              }
+              message = parts.join(' ') || null;
             }
 
-            for (const s of skippedRef.current) {
-              messages.push(
-                `${label(s)} noted — Beacon works from the ${label(primary)}, which carries the transaction detail behind these numbers.`
-              );
-            }
-
-            if (messages.length) setNotice(messages.join(' '));
+            if (message) setNotice(message);
 
             return analysisResultRef.current;
           })
