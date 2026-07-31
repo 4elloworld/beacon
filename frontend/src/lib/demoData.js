@@ -1,12 +1,12 @@
 // Hardcoded demo dataset matching the approved prototype. Used when no real CSV is uploaded.
 
 export const DEMO_PROPERTIES = [
-  { id: 0, num: '1847', street: 'Maple Ridge Drive',    city: 'Austin, TX',      rent: 38400,  exp: 60672,  late: 0,  status: 'red',   note: '158% expense ratio · $15,840 unnamed repairs' },
-  { id: 1, num: '324',  street: 'Birchwood Lane',       city: 'Dallas, TX',      rent: 26400,  exp: 28776,  late: 11, status: 'red',   note: '109% expense ratio · chronic late payer' },
-  { id: 2, num: '912',  street: 'Thornwood Circle',     city: 'Houston, TX',     rent: 31200,  exp: 34320,  late: 0,  status: 'red',   note: '110% expense ratio · 6 months vacant' },
-  { id: 3, num: '2201', street: 'Cedar Hollow Court',   city: 'San Antonio, TX', rent: 28800,  exp: 30528,  late: 0,  status: 'amber', note: '106% expense ratio · duplicate mgmt fees' },
-  { id: 4, num: '763',  street: 'Ridgemont Way',        city: 'Austin, TX',      rent: 33600,  exp: 34272,  late: 0,  status: 'amber', note: '102% expense ratio · bookkeeping anomaly' },
-  { id: 5, num: '558',  street: 'Stonegate Terrace',    city: 'Dallas, TX',      rent: 29040,  exp: 26252,  late: 0,  status: 'green', note: '90% expense ratio · best performing' },
+  { id: 0, num: '1847', street: 'Maple Ridge Drive',    city: 'Austin, TX',      rent: 38400,  exp: 60672,  late: 0,  status: 'red',   note: '$15,840 unnamed repairs' },
+  { id: 1, num: '324',  street: 'Birchwood Lane',       city: 'Dallas, TX',      rent: 26400,  exp: 28776,  late: 11, status: 'red',   note: 'chronic late payer' },
+  { id: 2, num: '912',  street: 'Thornwood Circle',     city: 'Houston, TX',     rent: 31200,  exp: 34320,  late: 0,  status: 'red',   note: '6 months vacant' },
+  { id: 3, num: '2201', street: 'Cedar Hollow Court',   city: 'San Antonio, TX', rent: 28800,  exp: 30528,  late: 0,  status: 'amber', note: 'duplicate mgmt fees' },
+  { id: 4, num: '763',  street: 'Ridgemont Way',        city: 'Austin, TX',      rent: 33600,  exp: 34272,  late: 0,  status: 'amber', note: 'bookkeeping anomaly' },
+  { id: 5, num: '558',  street: 'Stonegate Terrace',    city: 'Dallas, TX',      rent: 29040,  exp: 26252,  late: 0,  status: 'green', note: 'best performing' },
 ];
 
 export const DEMO_FLAGS = [

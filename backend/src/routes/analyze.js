@@ -53,9 +53,11 @@ router.post('/', async (req, res) => {
     const status = ratio > 1 ? 'red' : ratio > 0.85 ? 'amber' : 'green';
     const ratioPct = Math.round(ratio * 100);
     const topFlag = pFlags[0];
+    // The card already prints the ratio on its own line — the note carries only
+    // the reason, so the two don't read as a stutter.
     const note = topFlag
-      ? `${ratioPct}% expense ratio · ${topFlag.title.split('—').slice(1).join('—').trim() || 'flagged'}`
-      : `${ratioPct}% expense ratio`;
+      ? (topFlag.title.split('—').slice(1).join('—').trim() || 'flagged for review')
+      : '';
 
     return {
       id: i,

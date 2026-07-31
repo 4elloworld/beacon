@@ -419,8 +419,14 @@ export default function Dashboard({ onKeyTakeaways }) {
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: rc, fontWeight: 500, marginBottom: 3 }}>{ratio}% expense ratio</div>
-                <div style={{ fontSize: 11, color: 'var(--ink3)' }}>{p.note}</div>
-                {p.late > 0 && <div style={{ marginTop: 6 }}><span className="pill red"><span className="pdot" />{p.late} late fees</span></div>}
+                {p.note && <div style={{ fontSize: 11, color: 'var(--ink3)' }}>{p.note}</div>}
+                {p.late > 0 && (
+                  <div style={{ marginTop: 6 }}>
+                    <span className="pill red">
+                      <span className="pdot" />{p.late} late {p.late === 1 ? 'fee' : 'fees'}
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
