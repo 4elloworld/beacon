@@ -117,7 +117,7 @@ export function buildInsights(analysis) {
       cls: 'r2',
       priority: { kind: 'amber', text: 'This month' },
       title: 'Decide on the chronic late-payer lease renewals',
-      body: `${lateFlags.length} ${plural(lateFlags.length)} show repeated late fees or NSF charges. That is a pattern worth deciding on before renewal paperwork gets signed — another year carries the same risk profile.`,
+      body: `${lateFlags.length} ${plural(lateFlags.length)} ${lateFlags.length === 1 ? 'shows' : 'show'} repeated late fees or NSF charges. That is a pattern worth deciding on before renewal paperwork gets signed — another year carries the same risk profile.`,
       primaryBtn: 'Assess tenant risk →',
       secondaryBtn: 'Know your options',
     });
@@ -132,5 +132,58 @@ export function buildInsights(analysis) {
     secondaryBtn: 'See estimates',
   });
 
-  return { callouts, rocks: rocks.slice(0, 3), flagCount: flags.length, propertyCount };
+  // Follow-up checklist, drawn from the specific properties in this portfolio.
+  const actions = [];
+  const name = p => [p.num, p.street].filter(Boolean).join(' ') || p.fullAddress;
+
+  for (const v of vacancies.slice(0, 2)) {
+    const p = properties.find(x => x.fullAddress === v.property);
+    actions.push({
+      title: `Find out why ${p ? name(p) : 'this property'} had no rent coming in`,
+      sub: v.detail,
+      high: true,
+    });
+  }
+
+  for (const p of loss.slice(0, 2)) {
+    if (!p.rent) continue;
+    actions.push({
+      title: `Run hold-vs-sell numbers on ${name(p)}`,
+      sub: `${Math.round(p.ratio * 100)}% expense ratio — ${money(p.exp)} spent against ${money(p.rent)} collected.`,
+      high: true,
+    });
+  }
+
+  for (const f of noVendor.slice(0, 1)) {
+    const p = properties.find(x => x.fullAddress === f.property);
+    actions.push({
+      title: `Request vendor names for charges on ${p ? name(p) : 'flagged properties'}`,
+      sub: f.sub || f.detail,
+      high: true,
+    });
+  }
+
+  actions.push({
+    title: 'Set up monthly CSV exports for automatic updates',
+    sub: 'Request scheduled exports from your property manager — one email, one CSV, and this dashboard stays current.',
+    high: false,
+  });
+  actions.push({
+    title: 'Build a capital reserve fund',
+    sub: 'A 5% monthly reserve turns surprise repairs into a planned cost rather than a cash injection.',
+    high: false,
+  });
+  actions.push({
+    title: 'Add taxes, insurance and debt service to this dashboard',
+    sub: 'These are missing from the export. Until they are in, your expense ratio is understated.',
+    high: false,
+  });
+
+  return {
+    callouts,
+    rocks: rocks.slice(0, 3),
+    actions: actions.slice(0, 7),
+    flagCount: flags.length,
+    propertyCount,
+  };
 }

@@ -47,6 +47,8 @@ export default function Remedies({ onBack }) {
       }))
     : ROCKS;
 
+  const actions = insights?.actions || DEMO_ACTIONS;
+
   function toggle(i) {
     setChecked(prev => {
       const next = new Set(prev);
@@ -86,7 +88,7 @@ export default function Remedies({ onBack }) {
       {/* Action checklist */}
       <div className="card">
         <div style={{ padding: '0 20px' }}>
-          {DEMO_ACTIONS.map((a, i) => {
+          {actions.map((a, i) => {
             const done = checked.has(i);
             return (
               <div key={i} className={`action-item${a.high ? ' high' : ''}${done ? ' done' : ''}`}>
