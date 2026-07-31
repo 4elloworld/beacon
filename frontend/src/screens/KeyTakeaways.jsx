@@ -1,4 +1,6 @@
 import BeaconDot from '../components/BeaconDot.jsx';
+import { useApp } from '../context/AppContext.jsx';
+import { buildInsights } from '../lib/insights.js';
 
 const CALLOUTS = [
   { type: 'red',   icon: '⚠', body: <><strong>5 of 6 properties are running at a loss.</strong> Not one of them has expenses below rent collected. One property is spending $1.58 for every $1.00 earned. This isn't bad luck — it's a structural problem that's been invisible until now.</> },
@@ -9,6 +11,16 @@ const CALLOUTS = [
 ];
 
 export default function KeyTakeaways({ onNext }) {
+  const { analysisResults } = useApp();
+  const insights = buildInsights(analysisResults);
+  const callouts = insights
+    ? insights.callouts.map(c => ({
+        type: c.type,
+        icon: c.icon,
+        body: <><strong>{c.lead}</strong>{c.rest}</>,
+      }))
+    : CALLOUTS;
+
   return (
     <div>
       <div className="card">
@@ -25,7 +37,7 @@ export default function KeyTakeaways({ onNext }) {
         </div>
         <div className="card-body">
           <div className="sec-title" style={{ marginBottom: 14 }}>What Beacon found in your portfolio</div>
-          {CALLOUTS.map((c, i) => (
+          {callouts.map((c, i) => (
             <div key={i} className={`callout ${c.type}`}>
               <div style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{c.icon}</div>
               <div className="callout-body">{c.body}</div>

@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { DEMO_ACTIONS } from '../lib/demoData.js';
+import { useApp } from '../context/AppContext.jsx';
+import { buildInsights } from '../lib/insights.js';
+
+const PILL = { red: 'red', amber: 'amber', blue: 'blue' };
 
 const ROCKS = [
   {
@@ -27,6 +31,21 @@ const ROCKS = [
 
 export default function Remedies({ onBack }) {
   const [checked, setChecked] = useState(new Set());
+  const { analysisResults } = useApp();
+  const insights = buildInsights(analysisResults);
+
+  const rocks = insights
+    ? insights.rocks.map((r, i) => ({
+        ...r,
+        id: i + 1,
+        priority: (
+          <span className={`pill ${PILL[r.priority.kind]}`}>
+            {r.priority.kind !== 'blue' && <span className="pdot" />}
+            {r.priority.text}
+          </span>
+        ),
+      }))
+    : ROCKS;
 
   function toggle(i) {
     setChecked(prev => {
@@ -42,7 +61,7 @@ export default function Remedies({ onBack }) {
       <p style={{ color: 'var(--ink3)', marginBottom: 24, fontSize: 14 }}>Problems found. Here's how to fix them — ordered by impact.</p>
 
       {/* Big rocks */}
-      {ROCKS.map(r => (
+      {rocks.map(r => (
         <div key={r.id} className={`rock ${r.cls}`}>
           <div className="rock-head">
             {r.priority}

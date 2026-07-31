@@ -5,11 +5,13 @@ import { DEMO_SCAN_STEPS } from '../lib/demoData.js';
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 export default function Analyze({ onComplete, alreadyDone }) {
-  const { portfolioData, setAnalysisResults } = useApp();
+  const { portfolioData, analysisResults, setAnalysisResults } = useApp();
   const analysisResultRef = useRef(null);
 
+  const doneSteps = analysisResults?.scanSteps || DEMO_SCAN_STEPS;
+
   // If returning to this screen after scan completed, show done state immediately
-  const [visibleSteps, setVisibleSteps] = useState(alreadyDone ? DEMO_SCAN_STEPS : []);
+  const [visibleSteps, setVisibleSteps] = useState(alreadyDone ? doneSteps : []);
   const [progress, setProgress] = useState(alreadyDone ? 100 : 0);
   const [statusText, setStatusText] = useState(alreadyDone ? 'Analysis complete — see what we found.' : 'Starting analysis…');
   const [scanDone, setScanDone] = useState(alreadyDone);
@@ -17,36 +19,45 @@ export default function Analyze({ onComplete, alreadyDone }) {
   useEffect(() => {
     if (alreadyDone) return; // already ran — don't re-animate
 
-    // Kick off backend analysis in parallel — result stored for when user clicks CTA
     const uploads = portfolioData?.uploads || [];
-    if (uploads.length > 0) {
-      fetch(`${API_URL}/api/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows: uploads[0].data }),
-      })
-        .then(r => r.json())
-        .then(data => { analysisResultRef.current = data; })
-        .catch(() => {}); // gracefully fall back to demo data
-    }
+    const analysis = uploads.length > 0
+      ? fetch(`${API_URL}/api/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: uploads[0].data }),
+        })
+          .then(r => (r.ok ? r.json() : null))
+          .then(data => { analysisResultRef.current = data; return data; })
+          .catch(() => null)
+      : Promise.resolve(null);
 
-    // Animation loop — runs regardless of backend state
+    // Reveal steps one at a time. Steps come from the real analysis once it lands;
+    // until then the demo steps stand in so the animation can start immediately.
     let i = 0;
+    let cancelled = false;
     const interval = setInterval(() => {
-      if (i < DEMO_SCAN_STEPS.length) {
-        const step = DEMO_SCAN_STEPS[i];
+      const steps = analysisResultRef.current?.scanSteps || DEMO_SCAN_STEPS;
+      if (cancelled) return;
+      if (i < steps.length) {
+        const step = steps[i];
         setVisibleSteps(prev => [...prev, step]);
-        setProgress(Math.round(((i + 1) / DEMO_SCAN_STEPS.length) * 100));
+        setProgress(Math.round(((i + 1) / steps.length) * 100));
         setStatusText(step.label + '…');
         i++;
       } else {
         clearInterval(interval);
-        setStatusText('Analysis complete — see what we found.');
-        setScanDone(true);
+        analysis.finally(() => {
+          if (cancelled) return;
+          const real = analysisResultRef.current;
+          if (real?.scanSteps) setVisibleSteps(real.scanSteps);
+          setProgress(100);
+          setStatusText('Analysis complete — see what we found.');
+          setScanDone(true);
+        });
       }
     }, 660);
 
-    return () => clearInterval(interval);
+    return () => { cancelled = true; clearInterval(interval); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleCTA() {

@@ -6,7 +6,16 @@ import { DEMO_PROPERTIES, DEMO_FLAGS, DEMO_KPIS } from '../lib/demoData.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
-const fmt = n => '$' + Math.abs(n).toLocaleString();
+const fmt = n => '$' + Math.round(Math.abs(n)).toLocaleString();
+
+// Compact money for the tight property-card tiles: $9.4k, $850, $1.2M
+const compact = n => {
+  const v = Math.abs(n);
+  if (v >= 1_000_000) return '$' + (v / 1_000_000).toFixed(1) + 'M';
+  if (v >= 10_000) return '$' + Math.round(v / 1000) + 'k';
+  if (v >= 1_000) return '$' + (v / 1000).toFixed(1) + 'k';
+  return '$' + Math.round(v).toLocaleString();
+};
 
 // Annual estimates for each cost type (portfolio-wide)
 const COST_ESTIMATES_ANNUAL = {
@@ -74,13 +83,37 @@ export default function Dashboard({ onKeyTakeaways }) {
   const {
     completenessPercent,
     toggleGlobalConceal, togglePropertyConceal, isConcealed, concealState,
-    costState, updateCost,
+    costState, updateCost, analysisResults,
   } = useApp();
+
+  // Real analysis when a file was uploaded and the backend responded; demo data otherwise.
+  const isReal = Boolean(analysisResults?.isRealData && analysisResults.properties?.length);
+  const PROPERTIES = isReal ? analysisResults.properties : DEMO_PROPERTIES;
+  const FLAGS = isReal ? analysisResults.flags : DEMO_FLAGS;
+  const KPIS = isReal
+    ? {
+        propertyCount: analysisResults.propertyCount,
+        dateRange: analysisResults.dateRange,
+        rentCollected: analysisResults.totalRent,
+        totalExpenses: analysisResults.totalExpenses,
+        netPosition: analysisResults.netPosition,
+        ownerContributed: 0,
+        flagCount: analysisResults.flagCount,
+        baseExpenseRatio: analysisResults.baseExpenseRatio,
+      }
+    : DEMO_KPIS;
+
+  const lossCount = PROPERTIES.filter(p => (p.exp || 0) > (p.rent || 0)).length;
 
   const concealed = concealState.global;
   const [costsOpen, setCostsOpen] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
+  const [showAllFlags, setShowAllFlags] = useState(false);
   const prevAddedRef = useRef(0);
+
+  const visibleFlags = showAllFlags ? FLAGS : FLAGS.slice(0, 12);
+  // A bar per property stops being readable past ~14; show the worst ratios.
+  const chartProps = PROPERTIES.length > 14 ? PROPERTIES.slice(0, 14) : PROPERTIES;
 
   // Compute added costs
   const { total: addedCosts, addedTypes } = computeAddedCosts(costState);
@@ -99,33 +132,47 @@ export default function Dashboard({ onKeyTakeaways }) {
   }, [addedCosts]);
 
   // True expense ratio calculation
-  const baseRatio = DEMO_KPIS.baseExpenseRatio;
-  const trueRatioRaw = hasCosts
-    ? Math.round(((DEMO_KPIS.totalExpenses + addedCosts) / DEMO_KPIS.rentCollected) * 100)
+  const baseRatio = KPIS.baseExpenseRatio;
+  const trueRatioRaw = hasCosts && KPIS.rentCollected > 0
+    ? Math.round(((KPIS.totalExpenses + addedCosts) / KPIS.rentCollected) * 100)
     : baseRatio;
   const displayTrueRatio = useCountUp(trueRatioRaw);
+  const netPosition = KPIS.netPosition - (hasCosts ? addedCosts : 0);
 
   // Delta label: "taxes + insurance"
   const deltaLabel = addedTypes.map(t => COST_LABELS[t]).join(' + ');
 
   function getAddr(p) {
+    const num = p.num || '';
     if (isConcealed(p.id)) {
-      return { line1: `•• ${p.street}`, line2: `#${p.num.slice(-2)} · ${p.city}`, concealed: true };
+      const masked = num ? `#${num.slice(-2)}` : '#••';
+      return { line1: `•• ${p.street}`, line2: [masked, p.city].filter(Boolean).join(' · '), concealed: true };
     }
-    return { line1: `${p.num} ${p.street}`, line2: p.city, concealed: false };
+    return { line1: [num, p.street].filter(Boolean).join(' '), line2: p.city, concealed: false };
   }
 
   const pctLabel = completenessPercent >= 80 ? 'strong data picture' : completenessPercent >= 65 ? 'good coverage' : 'based on uploaded data only';
   const pctColor = completenessPercent >= 80 ? 'var(--green2)' : completenessPercent >= 65 ? 'var(--blue)' : 'var(--gold)';
-  const concealCount = DEMO_PROPERTIES.filter(p => isConcealed(p.id)).length;
-  const concealStatus = concealCount === 0 ? 'all visible' : concealCount === DEMO_PROPERTIES.length ? 'all concealed' : `${concealCount} of ${DEMO_PROPERTIES.length} concealed`;
+  const concealCount = PROPERTIES.filter(p => isConcealed(p.id)).length;
+  const concealStatus = concealCount === 0 ? 'all visible' : concealCount === PROPERTIES.length ? 'all concealed' : `${concealCount} of ${PROPERTIES.length} concealed`;
 
   return (
     <div>
+      {!isReal && (
+        <div style={{
+          background: 'var(--gold-light)', border: '1px solid var(--gold)', borderRadius: 8,
+          padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: 'var(--ink2)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span style={{ fontSize: 14 }}>◆</span>
+          <span><strong>Sample portfolio.</strong> Upload a General Ledger CSV to see your own numbers here.</span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h2 className="serif" style={{ fontSize: 32, marginBottom: 4, fontWeight: 400 }}>Your portfolio</h2>
-          <div style={{ fontSize: 13, color: 'var(--ink4)' }}>{DEMO_KPIS.propertyCount} properties · {DEMO_KPIS.dateRange}</div>
+          <div style={{ fontSize: 13, color: 'var(--ink4)' }}>{KPIS.propertyCount} properties · {KPIS.dateRange}</div>
         </div>
         <div className="btn-row">
           <button className="btn sm" onClick={toggleGlobalConceal}>
@@ -138,30 +185,34 @@ export default function Dashboard({ onKeyTakeaways }) {
 
       {/* KPI grid */}
       <div className="kpi-grid">
-        <div className="kpi success"><div className="kpi-label">Rent collected</div><div className="kpi-val">{fmt(DEMO_KPIS.rentCollected)}</div><div className="kpi-sub">{DEMO_KPIS.dateRange}</div></div>
+        <div className="kpi success"><div className="kpi-label">Rent collected</div><div className="kpi-val">{fmt(KPIS.rentCollected)}</div><div className="kpi-sub">{KPIS.dateRange}</div></div>
 
         <div className={`kpi danger${isFlashing ? ' kpi-flash' : ''}`}>
           <div className="kpi-label">Total expenses</div>
-          <div className="kpi-val">{fmt(DEMO_KPIS.totalExpenses + (hasCosts ? addedCosts : 0))}</div>
-          <div className="kpi-sub">{hasCosts ? `includes ${fmt(addedCosts)} added costs` : 'expenses above rent'}</div>
+          <div className="kpi-val">{fmt(KPIS.totalExpenses + (hasCosts ? addedCosts : 0))}</div>
+          <div className="kpi-sub">
+            {hasCosts ? `includes ${fmt(addedCosts)} added costs` : `${baseRatio}% of rent collected`}
+          </div>
         </div>
 
-        <div className={`kpi danger${isFlashing ? ' kpi-flash' : ''}`}>
+        <div className={`kpi ${netPosition < 0 ? 'danger' : 'success'}${isFlashing ? ' kpi-flash' : ''}`}>
           <div className="kpi-label">Net position</div>
-          <div className="kpi-val">-{fmt(Math.abs(DEMO_KPIS.netPosition) + (hasCosts ? addedCosts : 0))}</div>
+          <div className="kpi-val">{netPosition < 0 ? '-' : ''}{fmt(netPosition)}</div>
           <div className="kpi-sub">{hasCosts ? 'including added costs' : 'from uploaded data'}</div>
         </div>
 
-        <div className="kpi warning">
-          <div className="kpi-label">Owner contributed</div>
-          <div className="kpi-val">{fmt(DEMO_KPIS.ownerContributed)}</div>
-          <div className="kpi-sub">added from personal funds</div>
-        </div>
+        {KPIS.ownerContributed > 0 && (
+          <div className="kpi warning">
+            <div className="kpi-label">Owner contributed</div>
+            <div className="kpi-val">{fmt(KPIS.ownerContributed)}</div>
+            <div className="kpi-sub">added from personal funds</div>
+          </div>
+        )}
 
-        <div className="kpi danger">
+        <div className={`kpi ${KPIS.flagCount > 0 ? 'danger' : 'success'}`}>
           <div className="kpi-label">Flags detected</div>
-          <div className="kpi-val">{DEMO_KPIS.flagCount}</div>
-          <div className="kpi-sub">need your attention</div>
+          <div className="kpi-val">{KPIS.flagCount}</div>
+          <div className="kpi-sub">{KPIS.flagCount > 0 ? 'need your attention' : 'nothing flagged'}</div>
         </div>
 
         {/* True expense ratio — locked until first cost entered */}
@@ -273,8 +324,15 @@ export default function Dashboard({ onKeyTakeaways }) {
       {/* P&L chart */}
       <div className="card">
         <div className="card-head">
-          <span className="card-label">Property P&amp;L — rent vs expenses</span>
-          <span style={{ fontSize: 11, color: 'var(--red)' }}>5 of 6 properties running at a loss</span>
+          <span className="card-label">
+            Property P&amp;L — rent vs expenses
+            {chartProps.length < PROPERTIES.length && ` (top ${chartProps.length} by expense ratio)`}
+          </span>
+          <span style={{ fontSize: 11, color: lossCount > 0 ? 'var(--red)' : 'var(--green2)' }}>
+            {lossCount > 0
+              ? `${lossCount} of ${PROPERTIES.length} ${PROPERTIES.length === 1 ? 'property' : 'properties'} running at a loss`
+              : 'All properties cash-flow positive'}
+          </span>
         </div>
         <div className="card-body">
           <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 12, color: 'var(--ink4)' }}>
@@ -284,10 +342,10 @@ export default function Dashboard({ onKeyTakeaways }) {
           <div className="chart-wrap">
             <Bar
               data={{
-                labels: DEMO_PROPERTIES.map(p => p.street.split(' ').slice(0, 2).join(' ')),
+                labels: chartProps.map(p => p.street.split(' ').slice(0, 2).join(' ')),
                 datasets: [
-                  { label: 'Rent', data: DEMO_PROPERTIES.map(p => p.rent), backgroundColor: '#3B8BD4', borderWidth: 0, borderRadius: 4 },
-                  { label: 'Expenses', data: DEMO_PROPERTIES.map(p => p.exp), backgroundColor: '#8B2230', borderWidth: 0, borderRadius: 4 },
+                  { label: 'Rent', data: chartProps.map(p => p.rent), backgroundColor: '#3B8BD4', borderWidth: 0, borderRadius: 4 },
+                  { label: 'Expenses', data: chartProps.map(p => p.exp), backgroundColor: '#8B2230', borderWidth: 0, borderRadius: 4 },
                 ],
               }}
               options={{
@@ -310,7 +368,7 @@ export default function Dashboard({ onKeyTakeaways }) {
           <span style={{ fontSize: 11, color: 'var(--ink4)' }}>hover to conceal · click to explore</span>
         </div>
         <div className="prop-grid">
-          {DEMO_PROPERTIES.map(p => {
+          {PROPERTIES.map(p => {
             const addr = getAddr(p);
             const ratio = Math.round((p.exp / p.rent) * 100);
             const statusPill = { red: <span className="pill red"><span className="pdot" />Critical</span>, amber: <span className="pill amber"><span className="pdot" />Needs attention</span>, green: <span className="pill green"><span className="pdot" />Good</span> }[p.status];
@@ -330,11 +388,11 @@ export default function Dashboard({ onKeyTakeaways }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
                   <div style={{ background: 'var(--parchment)', borderRadius: 6, padding: 8 }}>
                     <div style={{ fontSize: 10, color: 'var(--ink4)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Rent</div>
-                    <div className="serif" style={{ fontSize: 18, fontWeight: 500, color: 'var(--green)' }}>${(p.rent / 1000).toFixed(0)}k</div>
+                    <div className="serif" style={{ fontSize: 18, fontWeight: 500, color: 'var(--green)' }}>{compact(p.rent)}</div>
                   </div>
                   <div style={{ background: 'var(--parchment)', borderRadius: 6, padding: 8 }}>
                     <div style={{ fontSize: 10, color: 'var(--ink4)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Expenses</div>
-                    <div className="serif" style={{ fontSize: 18, fontWeight: 500, color: 'var(--red)' }}>${(p.exp / 1000).toFixed(0)}k</div>
+                    <div className="serif" style={{ fontSize: 18, fontWeight: 500, color: 'var(--red)' }}>{compact(p.exp)}</div>
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: rc, fontWeight: 500, marginBottom: 3 }}>{ratio}% expense ratio</div>
@@ -350,9 +408,11 @@ export default function Dashboard({ onKeyTakeaways }) {
       <div className="card">
         <div className="card-head">
           <span className="card-label">Anomaly flags</span>
-          <span className="pill red"><span className="pdot" />7 items · click any to explore</span>
+          <span className={`pill ${FLAGS.length > 0 ? 'red' : 'green'}`}>
+            <span className="pdot" />{FLAGS.length} item{FLAGS.length === 1 ? '' : 's'} · click any to explore
+          </span>
         </div>
-        {DEMO_FLAGS.map((f, i) => (
+        {visibleFlags.map((f, i) => (
           <div key={i} className="flag-row">
             <span className={`pill ${f.sev}`} style={{ flexShrink: 0, alignSelf: 'flex-start', marginTop: 2 }}>
               <span className="pdot" />{f.sev === 'red' ? 'Critical' : 'Review'}
@@ -364,6 +424,16 @@ export default function Dashboard({ onKeyTakeaways }) {
             <span className="flag-arrow">→</span>
           </div>
         ))}
+        {FLAGS.length > visibleFlags.length && (
+          <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+            <button
+              className="btn sm"
+              onClick={() => setShowAllFlags(s => !s)}
+            >
+              {showAllFlags ? 'Show fewer' : `Show all ${FLAGS.length} flags`}
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>

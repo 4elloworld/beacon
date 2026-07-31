@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { useApp } from '../context/AppContext.jsx';
+import { buildInsights } from '../lib/insights.js';
+
+const PILL = { red: 'red', amber: 'amber', blue: 'blue' };
 
 const ROCKS = [
   {
@@ -26,17 +30,34 @@ const ROCKS = [
 
 export default function YourMove({ onBack, onNext }) {
   const [dismissed, setDismissed] = useState(new Set());
+  const { analysisResults } = useApp();
+  const insights = buildInsights(analysisResults);
+
+  const rocks = insights
+    ? insights.rocks.map((r, i) => ({
+        ...r,
+        id: i + 1,
+        priority: (
+          <span className={`pill ${PILL[r.priority.kind]}`}>
+            {r.priority.kind !== 'blue' && <span className="pdot" />}
+            {r.priority.text}
+          </span>
+        ),
+      }))
+    : ROCKS;
 
   function dismiss(id) {
     setDismissed(prev => new Set([...prev, id]));
   }
 
-  const visible = ROCKS.filter(r => !dismissed.has(r.id));
+  const visible = rocks.filter(r => !dismissed.has(r.id));
 
   return (
     <div>
       <h2 className="serif" style={{ fontSize: 32, marginBottom: 8, fontWeight: 400 }}>Your move.</h2>
-      <p style={{ color: 'var(--ink3)', marginBottom: 24, fontSize: 14 }}>Three highest-impact actions from your data. Dismiss anything that doesn't apply.</p>
+      <p style={{ color: 'var(--ink3)', marginBottom: 24, fontSize: 14 }}>
+        The highest-impact actions from your data. Dismiss anything that doesn't apply.
+      </p>
 
       {visible.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink4)' }}>

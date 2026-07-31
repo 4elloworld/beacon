@@ -1,10 +1,23 @@
-// Splits a full address string into house number and street for concealment.
+// Splits a full address string into house number, street, and city for display + concealment.
 export function parseAddress(fullAddress) {
-  const trimmed = fullAddress.trim();
-  // Handles: "1847 Maple Ridge Drive", "1847A Elm St", "1847-B Oak Ave"
-  const match = trimmed.match(/^(\d+[A-Za-z-]*)\s+(.+)$/);
-  if (match) {
-    return { houseNumber: match[1], street: match[2] };
+  let trimmed = String(fullAddress || '').trim();
+
+  // AppFolio often exports "<unit label> - <street address>"; keep the street half.
+  const dash = trimmed.split(/\s+-\s+/);
+  if (dash.length === 2) trimmed = dash[1].trim();
+
+  // Trailing "City, ST 12345"
+  let street = trimmed;
+  let city = '';
+  const tail = trimmed.match(/^(.*?),?\s+([A-Za-z][A-Za-z .'-]*?),\s*([A-Za-z]{2})\.?\s*(\d{5}(?:-\d{4})?)?$/);
+  if (tail) {
+    street = tail[1].trim();
+    city = `${tail[2].trim()}, ${tail[3].toUpperCase()}`;
   }
-  return { houseNumber: null, street: trimmed };
+
+  const num = street.match(/^(\d+[A-Za-z-]*)\s+(.+)$/);
+  if (num) {
+    return { houseNumber: num[1], num: num[1], street: num[2], city };
+  }
+  return { houseNumber: null, num: '', street, city };
 }
