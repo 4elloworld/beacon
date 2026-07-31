@@ -27,7 +27,10 @@ export default function Analyze({ onComplete, alreadyDone }) {
           body: JSON.stringify({ rows: uploads[0].data }),
         })
           .then(r => (r.ok ? r.json() : null))
-          .then(data => { analysisResultRef.current = data; return data; })
+          .then(data => {
+            analysisResultRef.current = data?.isRealData ? data : null;
+            return analysisResultRef.current;
+          })
           .catch(() => null)
       : Promise.resolve(null);
 

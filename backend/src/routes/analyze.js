@@ -126,7 +126,9 @@ router.post('/', async (req, res) => {
   ];
 
   res.json({
-    isRealData: true,
+    // No identifiable properties means we could not read this export; the UI
+    // falls back to the sample portfolio rather than showing an empty one.
+    isRealData: properties.length > 0,
     propertyCount: properties.length,
     rowCount: cleaned.length,
     dateRange,
