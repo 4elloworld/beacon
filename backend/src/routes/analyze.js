@@ -7,6 +7,17 @@ const router = Router();
 
 const fmtMoney = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString();
 
+// Labels a ledger uses for structure rather than for a property.
+const LEDGER_MARKERS = /^(->|starting balance|ending balance|net change|beginning balance|total\b|subtotal\b|grand total\b)/i;
+
+function isTransaction(row) {
+  // Every real transaction is dated; section headers and totals are not.
+  if (!row.date) return false;
+  if (!row.property) return false;
+  if (LEDGER_MARKERS.test(row.property.trim())) return false;
+  return true;
+}
+
 function fmtRange(dates) {
   if (!dates.length) return '';
   const f = d => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
@@ -21,7 +32,11 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'rows array is required' });
   }
 
-  const cleaned = rows.map(cleanRow);
+  // A ledger export interleaves section headers and running totals with the
+  // transactions — "-> 1050-00 - Operating Account", "Starting Balance",
+  // "Net Change". They have no date, and their balance figures are not income.
+  // Counted as rows they invent properties and inflate every total, so drop them.
+  const cleaned = rows.map(cleanRow).filter(isTransaction);
   const flags = runAnomalyDetection(cleaned);
 
   const byProperty = {};
@@ -136,8 +151,8 @@ router.post('/', async (req, res) => {
   let readError = null;
   if (!readable) {
     readError = properties.length === 0
-      ? "No property names were found in this file. Beacon needs a column identifying the property for each row."
-      : `Found ${properties.length} ${properties.length === 1 ? 'property' : 'properties'} but no readable amounts. Beacon needs per-transaction amounts — a Debit/Credit pair, or a single signed Amount column. Summary reports that put figures in per-account columns aren't supported yet.`;
+      ? `No dated transactions were found in this file${rows.length ? ` (${rows.length.toLocaleString()} rows read)` : ''}. Beacon works from transaction rows — each needs a date and a property. Summary reports that total each property on one line aren't supported yet.`
+      : `Found ${properties.length} ${properties.length === 1 ? 'property' : 'properties'} but no readable amounts. Beacon needs per-transaction amounts — a Debit/Credit pair, or a single signed Amount column.`;
   }
 
   res.json({

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext.jsx';
-import { parseCSV } from '../lib/csvParser.js';
+import { parseCSV, UnsupportedFileError } from '../lib/csvParser.js';
 
 // `soon` marks a report Beacon accepts but does not analyze yet. Listing them
 // shows where the product is going; the marker keeps that from reading as a
@@ -32,8 +32,11 @@ export default function Upload({ onNext }) {
         ...(prev || {}),
         uploads: [...((prev?.uploads) || []), result],
       }));
-    } catch {
-      setError("We couldn't read that file — please check it's a CSV export from AppFolio, Buildium, or Propertyware.");
+    } catch (err) {
+      // Say which file and why, rather than a single generic line for every cause.
+      setError(err instanceof UnsupportedFileError
+        ? `${file.name} — ${err.message}`
+        : `We couldn't read ${file.name}. Please check it's a CSV or Excel export from AppFolio, Buildium, or Propertyware.`);
     }
   }, [setPortfolioData]);
 
@@ -87,7 +90,7 @@ export default function Upload({ onNext }) {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,.xlsx,.pdf"
+              accept=".csv,.tsv,.xlsx,.xlsm,.xls"
               multiple
               style={{ display: 'none' }}
               onChange={e => Array.from(e.target.files).forEach(handleFile)}
