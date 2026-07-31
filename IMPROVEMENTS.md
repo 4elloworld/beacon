@@ -4,7 +4,9 @@ Last updated: 2026-07-31
 
 ## Live
 
-- **App:** https://beacon-production-7c41.up.railway.app
+- **App:** deployed on Railway — the URL is deliberately not recorded here, because
+  this repo is public and the app has no authentication. Get it from the Railway
+  dashboard (project `beacon`) or `serviceDomainCreate` output.
 - **Repo:** https://github.com/4elloworld/beacon (public — Railway's free tier cannot pull private repos)
 - **Host:** Railway project `beacon`, single service, no database (the app is stateless)
 

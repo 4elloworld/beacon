@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import queryRouter from './routes/query.js';
 import uploadRouter from './routes/upload.js';
 import analyzeRouter from './routes/analyze.js';
+import { rateLimit } from './lib/rateLimit.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -13,6 +14,19 @@ const PORT = process.env.PORT || 4000;
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json({ limit: '50mb' }));
+
+// /api/query bills the Anthropic key on every call, so it gets the tighter cap.
+// The limits are sized well above what a person clicking through the demo hits.
+app.use('/api/query', rateLimit({
+  windowMs: 60_000,
+  max: Number(process.env.QUERY_RATE_LIMIT) || 10,
+  message: 'Too many questions in a row — please wait a minute and try again.',
+}));
+
+app.use('/api', rateLimit({
+  windowMs: 60_000,
+  max: Number(process.env.API_RATE_LIMIT) || 60,
+}));
 
 app.use('/api/query', queryRouter);
 app.use('/api/upload', uploadRouter);
