@@ -198,7 +198,9 @@ export default function Dashboard({ onKeyTakeaways }) {
         <div className={`kpi ${netPosition < 0 ? 'danger' : 'success'}${isFlashing ? ' kpi-flash' : ''}`}>
           <div className="kpi-label">Net position</div>
           <div className="kpi-val">{netPosition < 0 ? '-' : ''}{fmt(netPosition)}</div>
-          <div className="kpi-sub">{hasCosts ? 'including added costs' : 'from uploaded data'}</div>
+          <div className="kpi-sub">
+            {hasCosts ? 'including added costs' : isReal ? 'from uploaded data' : 'from sample data'}
+          </div>
         </div>
 
         {KPIS.ownerContributed > 0 && (
