@@ -20,6 +20,10 @@ export function AppProvider({ children }) {
     properties: new Set(),
   });
 
+  // Set when another screen sends the owner to the dashboard to enter costs, so
+  // the panel is already open when they land instead of making them find it.
+  const [costsPanelOpen, setCostsPanelOpen] = useState(false);
+
   function updateCost(type, mode, value = '') {
     setCostState(prev => ({ ...prev, [type]: { mode, value } }));
   }
@@ -56,6 +60,7 @@ export function AppProvider({ children }) {
       uploadDescription, setUploadDescription,
       additionalFiles, setAdditionalFiles,
       costState, updateCost,
+      costsPanelOpen, setCostsPanelOpen,
       concealState, togglePropertyConceal, toggleGlobalConceal, isConcealed,
       completenessPercent,
     }}>

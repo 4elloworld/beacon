@@ -3,6 +3,7 @@ import { DEMO_ACTIONS } from '../lib/demoData.js';
 import { useApp } from '../context/AppContext.jsx';
 import { buildInsights } from '../lib/insights.js';
 import { costsSummary } from '../lib/costs.js';
+import RockActions from '../components/RockActions.jsx';
 import { DEMO_KPIS } from '../lib/demoData.js';
 
 const PILL = { red: 'red', amber: 'amber', blue: 'blue' };
@@ -28,12 +29,14 @@ const ROCKS = [
     body: 'Your dashboard reflects AppFolio data only. Property taxes, landlord insurance, and capital reserves are real costs not captured here. On a 6-property portfolio these could add $28,000–$48,000 per year. Until you see that number you cannot make a confident hold, sell, or refinance decision on any property.',
     primaryBtn: 'Add missing costs →',
     secondaryBtn: 'See estimates',
+    action: 'costs',
   },
 ];
 
 export default function Remedies({ onBack }) {
   const [checked, setChecked] = useState(new Set());
-  const { analysisResults, costState } = useApp();
+  const { analysisResults, costState, setCostsPanelOpen } = useApp();
+  const goToCosts = () => { setCostsPanelOpen(true); onBack(); };
   const isReal = Boolean(analysisResults?.isRealData);
   const costs = costsSummary(
     costState,
@@ -80,8 +83,7 @@ export default function Remedies({ onBack }) {
           <div className="rock-title">{r.title}</div>
           <div className="rock-body">{r.body}</div>
           <div className="btn-row">
-            <button className="btn gold">{r.primaryBtn}</button>
-            <button className="btn text-link">{r.secondaryBtn}</button>
+            <RockActions rock={r} onCosts={goToCosts} />
           </div>
         </div>
       ))}
@@ -121,9 +123,11 @@ export default function Remedies({ onBack }) {
         <div className="card-body" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div>
             <div className="serif" style={{ fontSize: 18, marginBottom: 4, fontWeight: 500 }}>Want your complete action plan?</div>
-            <div style={{ fontSize: 13, color: 'var(--ink3)' }}>A full prioritized roadmap — all properties, all risks, 90-day sequence.</div>
+            <div style={{ fontSize: 13, color: 'var(--ink3)' }}>A full prioritized roadmap — all properties, all risks, 90-day sequence. <em style={{ color: 'var(--ink4)' }}>Coming soon.</em></div>
           </div>
-          <button className="btn primary">Generate full plan →</button>
+          <button className="btn primary" disabled title="Not built yet" style={{ opacity: 0.45, cursor: 'not-allowed' }}>
+            Generate full plan →
+          </button>
         </div>
       </div>
 

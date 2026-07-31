@@ -57,6 +57,7 @@ export default function Dashboard({ onKeyTakeaways }) {
     completenessPercent,
     toggleGlobalConceal, togglePropertyConceal, isConcealed, concealState,
     costState, updateCost, analysisResults,
+    costsPanelOpen, setCostsPanelOpen,
   } = useApp();
 
   // Real analysis when a file was uploaded and the backend responded; demo data otherwise.
@@ -79,7 +80,7 @@ export default function Dashboard({ onKeyTakeaways }) {
   const lossCount = PROPERTIES.filter(p => (p.exp || 0) > (p.rent || 0)).length;
 
   const concealed = concealState.global;
-  const [costsOpen, setCostsOpen] = useState(false);
+  const [costsOpen, setCostsOpen] = useState(costsPanelOpen);
   const [isFlashing, setIsFlashing] = useState(false);
   const [showAllFlags, setShowAllFlags] = useState(false);
   const prevAddedRef = useRef(0);
@@ -93,6 +94,19 @@ export default function Dashboard({ onKeyTakeaways }) {
   const COST_ITEMS = costItemsFor(estimates);
   const { total: addedCosts, addedTypes } = computeAddedCosts(costState, estimates);
   const hasCosts = addedCosts > 0;
+
+  // Another screen asked for the cost panel — open it, bring it into view, and
+  // clear the flag so returning here later doesn't force it open again.
+  const costsRef = useRef(null);
+  useEffect(() => {
+    if (!costsPanelOpen) return;
+    setCostsOpen(true);
+    setCostsPanelOpen(false);
+    const t = setTimeout(() => {
+      costsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [costsPanelOpen, setCostsPanelOpen]);
 
   // Flash KPI cards when costs change
   useEffect(() => {
@@ -227,7 +241,7 @@ export default function Dashboard({ onKeyTakeaways }) {
       </div>
 
       {/* Missing costs collapsible panel */}
-      <div className="costs-panel" style={{ marginBottom: 16 }}>
+      <div className="costs-panel" ref={costsRef} style={{ marginBottom: 16 }}>
         <button
           className="costs-panel-toggle"
           onClick={() => setCostsOpen(o => !o)}

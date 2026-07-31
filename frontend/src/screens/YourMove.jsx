@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 import { buildInsights } from '../lib/insights.js';
 import { costsSummary } from '../lib/costs.js';
+import RockActions from '../components/RockActions.jsx';
 import { DEMO_KPIS } from '../lib/demoData.js';
 
 const PILL = { red: 'red', amber: 'amber', blue: 'blue' };
@@ -27,12 +28,14 @@ const ROCKS = [
     body: 'Your dashboard reflects AppFolio data only. Property taxes, landlord insurance, and capital reserves are real costs not captured here. On a 6-property portfolio these could add $28,000–$48,000 per year. Until you see that number you cannot make a confident hold, sell, or refinance decision on any property.',
     primaryBtn: 'Enhance my data →',
     secondaryBtn: 'See estimates',
+    action: 'costs',
   },
 ];
 
 export default function YourMove({ onBack, onNext }) {
   const [dismissed, setDismissed] = useState(new Set());
-  const { analysisResults, costState } = useApp();
+  const { analysisResults, costState, setCostsPanelOpen } = useApp();
+  const goToCosts = () => { setCostsPanelOpen(true); onBack(); };
   const isReal = Boolean(analysisResults?.isRealData);
   const costs = costsSummary(
     costState,
@@ -84,8 +87,7 @@ export default function YourMove({ onBack, onNext }) {
             <div className="rock-title">{r.title}</div>
             <div className="rock-body">{r.body}</div>
             <div className="btn-row">
-              <button className="btn gold">{r.primaryBtn}</button>
-              <button className="btn text-link">{r.secondaryBtn}</button>
+              <RockActions rock={r} onCosts={goToCosts} />
             </div>
           </div>
         ))

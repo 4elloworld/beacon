@@ -4,6 +4,11 @@
 
 const money = n => '$' + Math.round(Math.abs(n)).toLocaleString();
 
+// An action is either wired to something real or honestly marked as not built.
+// `action: 'costs'` sends the owner to the dashboard's cost panel; anything left
+// as null renders disabled with a "soon" marker rather than doing nothing.
+export const ACTION_COSTS = 'costs';
+
 const COST_LABEL_WORDS = {
   property_tax: 'property taxes',
   insurance: 'landlord insurance',
@@ -155,6 +160,7 @@ export function buildInsights(analysis, costs = null) {
       body: `Your dashboard reflects this export only. Property taxes, landlord insurance, and capital reserves are real costs not captured here. On ${propertyCount} ${plural(propertyCount)} these can add tens of thousands per year. Until you see that number you cannot make a confident hold, sell, or refinance decision.`,
       primaryBtn: 'Add my costs →',
       secondaryBtn: 'See estimates',
+      action: ACTION_COSTS,
     });
   } else if (costs.missing?.length) {
     const remaining = costs.missing.map(t => COST_LABEL_WORDS[t] || t);
@@ -165,6 +171,7 @@ export function buildInsights(analysis, costs = null) {
       body: `You've added ${money(costs.total)} in costs the export didn't carry. Still outstanding: ${remaining.join(', ')}. Filling ${remaining.length === 1 ? 'that' : 'those'} in completes the number you need for a confident hold, sell, or refinance decision.`,
       primaryBtn: 'Add remaining costs →',
       secondaryBtn: 'See estimates',
+      action: ACTION_COSTS,
     });
   }
 
