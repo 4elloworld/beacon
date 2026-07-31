@@ -157,15 +157,32 @@ export function runAnomalyDetection(rows) {
       }
     }
 
-    // 5. Chronic late payer.
-    const lateFees = txns.filter(t => /late fee|nsf|bounced/i.test(t.description + ' ' + t.glAccount));
-    if (lateFees.length >= 3) {
+    // 5. Chronic late payer. A late fee posts twice in a double-entry ledger —
+    // once to the fee account, once to the bank — and only the first carries an
+    // amount after classification, so counting rows without that check doubles
+    // every total.
+    const lateFees = txns.filter(t =>
+      (t.amountIn > 0 || t.amountOut > 0) &&
+      /late fee|nsf|bounced/i.test(t.description + ' ' + t.glAccount)
+    );
+
+    // What matters is how often, not how many: six fees over two years is a
+    // different tenant from six over six months.
+    const activeMonths = new Set(txns.map(t => monthKey(t.date)).filter(Boolean)).size || 1;
+    const perMonth = lateFees.length / activeMonths;
+
+    if (lateFees.length >= 3 && perMonth >= 0.25) {
+      const chronic = perMonth >= 0.5;
       flags.push({
         flag_type: 'late_fee_pattern',
-        severity: 'critical',
+        severity: chronic ? 'critical' : 'review',
         property,
-        title: `${label} — ${lateFees.length} late fees / NSF charges`,
-        detail: `Chronic late payment pattern. Worth a lease renewal decision.`,
+        title: `${label} — ${lateFees.length} late ${lateFees.length === 1 ? 'fee' : 'fees'} / NSF charges in ${activeMonths} months`,
+        // Stated as a rate, not a share of months — a property can incur several
+        // in one month, so a percentage would read above 100%.
+        detail: chronic
+          ? `Averaging ${perMonth >= 1 ? perMonth.toFixed(1) : `one every ${Math.round(1 / perMonth)}`} ${perMonth >= 1 ? 'a month' : 'months'} across the period on record. That is a pattern rather than a rough patch — worth deciding before the next renewal.`
+          : `Occasional rather than chronic — roughly one every ${Math.round(1 / perMonth)} months. Worth watching if it continues.`,
       });
     }
 
