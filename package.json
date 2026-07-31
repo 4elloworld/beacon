@@ -1,9 +1,8 @@
 {
   "name": "beacon",
   "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "build": "cd frontend && npm install && npm run build && cp -r dist ../backend/public",
-    "start": "cd backend && node src/index.js",
-    "install:all": "cd frontend && npm install && cd ../backend && npm install"
+    "start": "cd backend && node src/index.js"
   }
 }

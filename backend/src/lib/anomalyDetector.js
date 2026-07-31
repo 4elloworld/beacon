@@ -1,4 +1,4 @@
-﻿// All anomaly detection rules from the handoff spec.
+// All anomaly detection rules from the handoff spec.
 
 function monthKey(date) {
   if (!date) return null;
@@ -90,7 +90,6 @@ export function runAnomalyDetection(rows, properties) {
     for (let i = 1; i < months.length; i++) {
       const expected = nextMonth(months[i - 1]);
       if (months[i] !== expected) {
-        // Count the gap: how many months are missing between months[i-1] and months[i]
         let gapCount = 0;
         let cur = expected;
         while (cur < months[i]) { gapCount++; cur = nextMonth(cur); }

@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import BeaconDot from './components/BeaconDot.jsx';
 import StepNav from './components/StepNav.jsx';
 import Upload from './screens/Upload.jsx';

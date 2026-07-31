@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import { cleanRow } from '../lib/dataClean.js';
 import { runAnomalyDetection } from '../lib/anomalyDetector.js';
 import { parseAddress } from '../lib/addressParser.js';

@@ -1,4 +1,4 @@
-﻿# Beacon — Improvements Log
+ Beacon — Improvements Log
 
 > **For future sessions:** Read this file first, then continue from the "Next iteration" section.
 > Start every session with: "Read IMPROVEMENTS.md and continue from where we left off."

@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 import { parseCSV } from '../lib/csvParser.js';
 

@@ -1,4 +1,4 @@
-﻿const CURRENCY_RE = /[$,]/g;
+const CURRENCY_RE = /[$,]/g;
 
 function parseMoney(val) {
   if (!val) return 0;

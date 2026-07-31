@@ -1,4 +1,4 @@
-﻿const STEPS = ['Upload', 'Analyze', 'Dashboard', 'Key Takeaways', 'Your move', 'Remedies'];
+const STEPS = ['Upload', 'Analyze', 'Dashboard', 'Key Takeaways', 'Your move', 'Remedies'];
 
 export default function StepNav({ currentScreen, goTo, scanComplete }) {
   return (

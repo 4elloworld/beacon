@@ -1,4 +1,4 @@
-﻿// Hardcoded demo dataset matching the approved prototype. Used when no real CSV is uploaded.
+// Hardcoded demo dataset matching the approved prototype. Used when no real CSV is uploaded.
 
 export const DEMO_PROPERTIES = [
   { id: 0, num: '1847', street: 'Maple Ridge Drive',    city: 'Austin, TX',      rent: 38400,  exp: 60672,  late: 0,  status: 'red',   note: '158% expense ratio · $15,840 unnamed repairs' },

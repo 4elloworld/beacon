@@ -1,4 +1,4 @@
-﻿import Papa from 'papaparse';
+import Papa from 'papaparse';
 
 const REPORT_PATTERNS = {
   general_ledger: [

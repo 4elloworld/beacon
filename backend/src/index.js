@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:3000' }));
+app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json({ limit: '50mb' }));
 
 app.use('/api/query', queryRouter);
@@ -20,8 +20,7 @@ app.use('/api/analyze', analyzeRouter);
 
 app.get('/health', (_, res) => res.json({ ok: true }));
 
-// Serve React frontend in production
-const distPath = path.join(__dirname, '../../public');
+const distPath = path.join(__dirname, '../public');
 app.use(express.static(distPath));
 app.get('*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));

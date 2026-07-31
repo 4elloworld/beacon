@@ -1,4 +1,4 @@
-﻿import BeaconDot from '../components/BeaconDot.jsx';
+import BeaconDot from '../components/BeaconDot.jsx';
 
 const CALLOUTS = [
   { type: 'red',   icon: '⚠', body: <><strong>5 of 6 properties are running at a loss.</strong> Not one of them has expenses below rent collected. One property is spending $1.58 for every $1.00 earned. This isn't bad luck — it's a structural problem that's been invisible until now.</> },

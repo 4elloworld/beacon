@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import multer from 'multer';
 import { cleanRow } from '../lib/dataClean.js';
 import { runAnomalyDetection } from '../lib/anomalyDetector.js';

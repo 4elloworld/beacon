@@ -1,4 +1,4 @@
-﻿export default function BeaconDot({ size = 10 }) {
+export default function BeaconDot({ size = 10 }) {
   return (
     <div
       className="beacon-dot"

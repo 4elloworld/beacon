@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { DEMO_ACTIONS } from '../lib/demoData.js';
 
 const ROCKS = [

@@ -1,4 +1,4 @@
-﻿// Splits a full address string into house number and street for concealment.
+// Splits a full address string into house number and street for concealment.
 export function parseAddress(fullAddress) {
   const trimmed = fullAddress.trim();
   // Handles: "1847 Maple Ridge Drive", "1847A Elm St", "1847-B Oak Ave"

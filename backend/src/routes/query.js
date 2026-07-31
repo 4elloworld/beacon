@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import { BEACON_SYSTEM_PROMPT } from '../prompts/system.js';
 
