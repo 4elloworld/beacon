@@ -3,6 +3,7 @@ import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip } from 'chart.js';
 import { useApp } from '../context/AppContext.jsx';
 import { DEMO_PROPERTIES, DEMO_FLAGS, DEMO_KPIS } from '../lib/demoData.js';
+import { estimatesFor, computeAddedCosts, costItemsFor, COST_LABELS } from '../lib/costs.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
@@ -16,63 +17,6 @@ const compact = n => {
   if (v >= 1_000) return '$' + (v / 1000).toFixed(1) + 'k';
   return '$' + Math.round(v).toLocaleString();
 };
-
-// Per-property annual estimates, scaled to the portfolio actually loaded.
-const COST_ESTIMATES_PER_PROPERTY = {
-  property_tax: 5333,
-  insurance:    2000,
-  mortgage:     0,     // no estimate — must be entered manually
-  landscaping:  1500,
-};
-
-// Reserves are conventionally a share of rent rather than a per-door figure.
-const RESERVE_RATE = 0.05;
-
-function estimatesFor(propertyCount, rentCollected) {
-  const n = Math.max(propertyCount || 1, 1);
-  return {
-    property_tax: COST_ESTIMATES_PER_PROPERTY.property_tax * n,
-    insurance:    COST_ESTIMATES_PER_PROPERTY.insurance * n,
-    mortgage:     0,
-    landscaping:  COST_ESTIMATES_PER_PROPERTY.landscaping * n,
-    reserves:     Math.round((rentCollected || 0) * RESERVE_RATE),
-  };
-}
-
-const shortMoney = n => (n >= 1000 ? `$${Math.round(n / 1000)}K` : `$${Math.round(n)}`);
-
-function costItemsFor(est) {
-  return [
-    { type: 'property_tax', label: 'Property taxes',          impact: `~${shortMoney(est.property_tax)}/yr est.`, hasEstimate: true },
-    { type: 'insurance',    label: 'Landlord insurance',      impact: `~${shortMoney(est.insurance)}/yr est.`,    hasEstimate: true },
-    { type: 'mortgage',     label: 'Mortgage / debt service', impact: 'varies',                                    hasEstimate: false },
-    { type: 'landscaping',  label: 'Lawn & landscaping',      impact: `~${shortMoney(est.landscaping)}/yr est.`,  hasEstimate: true },
-    { type: 'reserves',     label: 'Capital reserves (5%)',   impact: `~${shortMoney(est.reserves)}/yr est.`,     hasEstimate: true },
-  ];
-}
-
-const COST_LABELS = {
-  property_tax: 'taxes',
-  insurance: 'insurance',
-  mortgage: 'mortgage',
-  landscaping: 'landscaping',
-  reserves: 'reserves',
-};
-
-function computeAddedCosts(costState, estimates) {
-  let total = 0;
-  const addedTypes = [];
-  for (const [type, state] of Object.entries(costState)) {
-    let amt = 0;
-    if (state.mode === 'manual' && state.value) {
-      amt = parseFloat(state.value) || 0;
-    } else if (state.mode === 'est') {
-      amt = estimates[type] || 0;
-    }
-    if (amt > 0) { total += amt; addedTypes.push(type); }
-  }
-  return { total, addedTypes };
-}
 
 // Counts up to `target`. The animation is decoration — a timer guarantees the
 // final value lands even where requestAnimationFrame is throttled or never runs

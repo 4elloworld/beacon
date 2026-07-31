@@ -8,7 +8,7 @@ function countByType(flags, type) {
   return flags.filter(f => f.flag_type === type).length;
 }
 
-export function buildInsights(analysis) {
+export function buildInsights(analysis, costs = null) {
   if (!analysis?.isRealData || !analysis.properties?.length) return null;
 
   const { properties, flags = [], propertyCount, totalRent, totalExpenses, baseExpenseRatio } = analysis;
@@ -75,11 +75,26 @@ export function buildInsights(analysis) {
     });
   }
 
-  callouts.push({
-    type: 'amber', icon: '!',
-    lead: `Your picture is still incomplete.`,
-    rest: ` Property taxes, insurance, and mortgage are not in this export. Add them on the dashboard to see your true expense ratio.`,
-  });
+  // Only claim the picture is incomplete if it still is — the owner may have
+  // already supplied these on the dashboard.
+  if (costs?.total > 0) {
+    const trueRatio = totalRent > 0
+      ? Math.round(((totalExpenses + costs.total) / totalRent) * 100)
+      : null;
+    callouts.push({
+      type: 'amber', icon: '!',
+      lead: `You've added ${money(costs.total)} of costs the export didn't carry.`,
+      rest: trueRatio
+        ? ` That moves your expense ratio from ${baseExpenseRatio}% to ${trueRatio}% — the truer picture of what this portfolio costs to run.`
+        : ` Your dashboard now reflects them.`,
+    });
+  } else {
+    callouts.push({
+      type: 'amber', icon: '!',
+      lead: `Your picture is still incomplete.`,
+      rest: ` Property taxes, insurance, and mortgage are not in this export. Add them on the dashboard to see your true expense ratio.`,
+    });
+  }
 
   callouts.push({
     type: 'green', icon: '✓',
