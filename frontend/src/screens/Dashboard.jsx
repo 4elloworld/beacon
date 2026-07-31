@@ -74,7 +74,10 @@ function computeAddedCosts(costState, estimates) {
   return { total, addedTypes };
 }
 
-// Simple count-up hook
+// Counts up to `target`. The animation is decoration — a timer guarantees the
+// final value lands even where requestAnimationFrame is throttled or never runs
+// (background tab, low-power mode, reduced motion), so the headline figure is
+// never left showing a stale number.
 function useCountUp(target, duration = 500) {
   const [current, setCurrent] = useState(target);
   const prevRef = useRef(target);
@@ -83,14 +86,23 @@ function useCountUp(target, duration = 500) {
     const from = prevRef.current;
     if (from === target) return;
     prevRef.current = target;
+
+    let frame = null;
     const start = Date.now();
     const animate = () => {
       const progress = Math.min((Date.now() - start) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 2);
       setCurrent(Math.round(from + (target - from) * eased));
-      if (progress < 1) requestAnimationFrame(animate);
+      if (progress < 1) frame = requestAnimationFrame(animate);
     };
-    requestAnimationFrame(animate);
+    frame = requestAnimationFrame(animate);
+
+    const settle = setTimeout(() => setCurrent(target), duration + 50);
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      clearTimeout(settle);
+    };
   }, [target, duration]);
 
   return current;
@@ -306,7 +318,7 @@ export default function Dashboard({ onKeyTakeaways }) {
                     <button className={`ebtn${state.mode === 'na' ? ' na' : ''}`} onClick={() => updateCost(item.type, 'na')}>Not applicable</button>
                     {item.hasEstimate && (
                       <button className={`ebtn${state.mode === 'est' ? ' est' : ''}`} onClick={() => updateCost(item.type, 'est')}>
-                        Use estimate ({item.impact})
+                        Use estimate
                       </button>
                     )}
                     <button className={`ebtn${state.mode === 'manual' ? ' manual' : ''}`} onClick={() => updateCost(item.type, 'manual')}>
