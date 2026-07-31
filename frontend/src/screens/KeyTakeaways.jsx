@@ -9,7 +9,7 @@ const CALLOUTS = [
   { type: 'red',   icon: '⚠', body: <><strong>$15,840 in repairs with zero vendor names.</strong> 22 charges labeled only "Repairs." Three identical amounts in the same month. Four charges on the same day. This is where charges become impossible to verify.</> },
   { type: 'amber', icon: '!',  body: <><strong>One property has a chronic late-paying tenant.</strong> 11 late fees and 2 bounced checks across 8 months. That lease renewal decision is worth making before it expires.</> },
   { type: 'amber', icon: '!', incomplete: true, body: <><strong>Your picture is still incomplete.</strong> Property taxes, insurance, and mortgage aren't in this data. Your expense ratios are already significant — the true numbers may be higher.</> },
-  { type: 'green', icon: '✓',  body: <><strong>You found this now.</strong> Not next April. The same data that revealed these problems now guides every next move. Here are the three most important ones.</> },
+  { type: 'green', icon: '✓',  body: <><strong>You found this now.</strong> Not next April. The same data that revealed these problems now guides every next move. Here are the ones that matter most.</> },
 ];
 
 export default function KeyTakeaways({ onNext }) {

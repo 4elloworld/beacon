@@ -4,6 +4,14 @@
 
 const money = n => '$' + Math.round(Math.abs(n)).toLocaleString();
 
+const COST_LABEL_WORDS = {
+  property_tax: 'property taxes',
+  insurance: 'landlord insurance',
+  mortgage: 'mortgage / debt service',
+  landscaping: 'lawn & landscaping',
+  reserves: 'capital reserves',
+};
+
 function countByType(flags, type) {
   return flags.filter(f => f.flag_type === type).length;
 }
@@ -138,14 +146,27 @@ export function buildInsights(analysis, costs = null) {
     });
   }
 
-  rocks.push({
-    cls: 'r3',
-    priority: { kind: 'blue', text: 'This quarter' },
-    title: 'Build your true cost picture',
-    body: `Your dashboard reflects this export only. Property taxes, landlord insurance, and capital reserves are real costs not captured here. On ${propertyCount} ${plural(propertyCount)} these can add tens of thousands per year. Until you see that number you cannot make a confident hold, sell, or refinance decision.`,
-    primaryBtn: 'Add my costs →',
-    secondaryBtn: 'See estimates',
-  });
+  // Only ask for costs that haven't been supplied yet.
+  if (!costs || costs.total === 0) {
+    rocks.push({
+      cls: 'r3',
+      priority: { kind: 'blue', text: 'This quarter' },
+      title: 'Build your true cost picture',
+      body: `Your dashboard reflects this export only. Property taxes, landlord insurance, and capital reserves are real costs not captured here. On ${propertyCount} ${plural(propertyCount)} these can add tens of thousands per year. Until you see that number you cannot make a confident hold, sell, or refinance decision.`,
+      primaryBtn: 'Add my costs →',
+      secondaryBtn: 'See estimates',
+    });
+  } else if (costs.missing?.length) {
+    const remaining = costs.missing.map(t => COST_LABEL_WORDS[t] || t);
+    rocks.push({
+      cls: 'r3',
+      priority: { kind: 'blue', text: 'This quarter' },
+      title: 'Finish your true cost picture',
+      body: `You've added ${money(costs.total)} in costs the export didn't carry. Still outstanding: ${remaining.join(', ')}. Filling ${remaining.length === 1 ? 'that' : 'those'} in completes the number you need for a confident hold, sell, or refinance decision.`,
+      primaryBtn: 'Add remaining costs →',
+      secondaryBtn: 'See estimates',
+    });
+  }
 
   // Follow-up checklist, drawn from the specific properties in this portfolio.
   const actions = [];
@@ -188,11 +209,15 @@ export function buildInsights(analysis, costs = null) {
     sub: 'A 5% monthly reserve turns surprise repairs into a planned cost rather than a cash injection.',
     high: false,
   });
-  actions.push({
-    title: 'Add taxes, insurance and debt service to this dashboard',
-    sub: 'These are missing from the export. Until they are in, your expense ratio is understated.',
-    high: false,
-  });
+  if (!costs || costs.missing?.length) {
+    actions.push({
+      title: costs?.total
+        ? 'Add the remaining costs to this dashboard'
+        : 'Add taxes, insurance and debt service to this dashboard',
+      sub: 'These are missing from the export. Until they are in, your expense ratio is understated.',
+      high: false,
+    });
+  }
 
   return {
     callouts,

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 import { buildInsights } from '../lib/insights.js';
+import { costsSummary } from '../lib/costs.js';
+import { DEMO_KPIS } from '../lib/demoData.js';
 
 const PILL = { red: 'red', amber: 'amber', blue: 'blue' };
 
@@ -20,7 +22,7 @@ const ROCKS = [
     secondaryBtn: 'Know your options',
   },
   {
-    id: 3, cls: 'r3', priority: <span className="pill blue">This quarter</span>,
+    id: 3, cls: 'r3', costRock: true, priority: <span className="pill blue">This quarter</span>,
     title: 'Build your true cost picture',
     body: 'Your dashboard reflects AppFolio data only. Property taxes, landlord insurance, and capital reserves are real costs not captured here. On a 6-property portfolio these could add $28,000–$48,000 per year. Until you see that number you cannot make a confident hold, sell, or refinance decision on any property.',
     primaryBtn: 'Enhance my data →',
@@ -30,8 +32,14 @@ const ROCKS = [
 
 export default function YourMove({ onBack, onNext }) {
   const [dismissed, setDismissed] = useState(new Set());
-  const { analysisResults } = useApp();
-  const insights = buildInsights(analysisResults);
+  const { analysisResults, costState } = useApp();
+  const isReal = Boolean(analysisResults?.isRealData);
+  const costs = costsSummary(
+    costState,
+    isReal ? analysisResults.propertyCount : DEMO_KPIS.propertyCount,
+    isReal ? analysisResults.totalRent : DEMO_KPIS.rentCollected,
+  );
+  const insights = buildInsights(analysisResults, costs);
 
   const rocks = insights
     ? insights.rocks.map((r, i) => ({
@@ -44,7 +52,7 @@ export default function YourMove({ onBack, onNext }) {
           </span>
         ),
       }))
-    : ROCKS;
+    : ROCKS.filter(r => !(costs.total > 0 && r.costRock));
 
   function dismiss(id) {
     setDismissed(prev => new Set([...prev, id]));
