@@ -1,0 +1,17 @@
+﻿{
+  "name": "beacon-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "multer": "^1.4.5-lts.1",
+    "@anthropic-ai/sdk": "^0.26.0",
+    "pg": "^8.12.0"
+  }
+}
