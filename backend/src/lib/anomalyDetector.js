@@ -21,6 +21,10 @@ function fmtMonth(mk) {
   return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 }
 
+// A repeated charge below this isn't worth an owner's attention as a critical
+// finding; smaller ones are aggregated into a single review note instead.
+const DUPLICATE_MATERIALITY = 100;
+
 const GENERIC_DESCRIPTIONS = ['repairs', 'maintenance', 'work order', 'misc', 'general'];
 
 export function runAnomalyDetection(rows) {
@@ -36,23 +40,56 @@ export function runAnomalyDetection(rows) {
     const expenses = txns.filter(t => t.amountOut > 0);
     const label = property.replace(/,?\s*[A-Z]{2}\s*\d{5}$/, '');
 
-    // 1. Duplicate charge: same description + amount + month, on expense lines only.
-    const seen = {};
-    const dupsReported = new Set();
+    // 1. Duplicate charge: the same description and amount billed twice in one
+    // month. A charge that recurs at the same amount across several months is a
+    // standing item — rent, an escrow line, a recurring fee — not a duplicate,
+    // so only charges confined to a single month are considered.
+    const monthsSeen = {};
     for (const t of expenses) {
       if (!t.description) continue;
-      const key = `${t.description.toLowerCase()}|${t.amountOut}|${monthKey(t.date)}`;
+      const id = `${t.description.toLowerCase()}|${t.amountOut}`;
+      (monthsSeen[id] ||= new Set()).add(monthKey(t.date));
+    }
+
+    const seen = {};
+    const dupsReported = new Set();
+    const smallDupes = [];
+    for (const t of expenses) {
+      if (!t.description) continue;
+      const id = `${t.description.toLowerCase()}|${t.amountOut}`;
+      if (monthsSeen[id].size > 1) continue; // recurs monthly — expected, not a duplicate
+
+      const key = `${id}|${monthKey(t.date)}`;
       if (seen[key] && !dupsReported.has(key)) {
         dupsReported.add(key);
-        flags.push({
-          flag_type: 'duplicate_charge',
-          severity: 'critical',
-          property,
-          title: `${label} — possible duplicate charge`,
-          detail: `"${t.description}" for $${t.amountOut.toLocaleString()} appears more than once in ${fmtMonth(monthKey(t.date))}.`,
-        });
+
+        // A repeated charge for pocket change is not something to call critical.
+        // Those are collected and reported once, so nothing is hidden but the
+        // list stays worth reading.
+        if (t.amountOut < DUPLICATE_MATERIALITY) {
+          smallDupes.push(t);
+        } else {
+          flags.push({
+            flag_type: 'duplicate_charge',
+            severity: 'critical',
+            property,
+            title: `${label} — possible duplicate charge`,
+            detail: `"${t.description}" for $${t.amountOut.toLocaleString()} appears more than once in ${fmtMonth(monthKey(t.date))}, and not in any other month.`,
+          });
+        }
       }
       seen[key] = true;
+    }
+
+    if (smallDupes.length >= 2) {
+      const total = smallDupes.reduce((s, t) => s + t.amountOut, 0);
+      flags.push({
+        flag_type: 'duplicate_charge_minor',
+        severity: 'review',
+        property,
+        title: `${label} — ${smallDupes.length} small charges billed twice in the same month`,
+        detail: `${total.toLocaleString(undefined, { style: 'currency', currency: 'USD' })} in total, each under ${DUPLICATE_MATERIALITY.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })}. Worth a glance rather than a query.`,
+      });
     }
 
     // 2. Invoice splitting: several separate expense charges on one day.
