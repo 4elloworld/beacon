@@ -11,11 +11,13 @@ const REPORT_CONFIG = {
   rent_roll:            { label: 'Rent Roll',             required: false, soon: true, desc: 'Lease expiry countdown · Security deposit tracker' },
   owner_expense_report: { label: 'Owner Expense Report', required: false, soon: true, desc: 'Full vendor name visibility · Expense category breakdown' },
   cash_flow_detail:     { label: 'Cash Flow Detail',     required: false, soon: true, desc: 'Monthly net by property · Distribution verification' },
+  property_performance: { label: 'Property Performance', required: false, soon: true, desc: 'Per-property rent roll-up · Management fee rates' },
 };
 
 export default function Upload({ onNext }) {
   const { setPortfolioData } = useApp();
-  const [detectedReports, setDetectedReports] = useState({});
+  const [detectedReports, setDetectedReports] = useState({}); // by type — drives the "unlocks" cards
+  const [uploadedFiles, setUploadedFiles] = useState([]);     // every file, in order
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
@@ -25,6 +27,7 @@ export default function Upload({ onNext }) {
     try {
       const result = await parseCSV(file);
       setDetectedReports(prev => ({ ...prev, [result.reportType]: result }));
+      setUploadedFiles(prev => [...prev, result]);
       setPortfolioData(prev => ({
         ...(prev || {}),
         uploads: [...((prev?.uploads) || []), result],
@@ -94,17 +97,21 @@ export default function Upload({ onNext }) {
           {/* Upload confirmations */}
           {hasUpload && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-              {Object.entries(detectedReports).map(([type, result]) => (
-                <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--green-light)', border: '1px solid #B8D9CA', borderRadius: 'var(--radius)', animation: 'fadeUp .25s ease both' }}>
+              {/* Listed per file, not per report type — two ledgers are two rows,
+                  and the filename identifies a file whose format we don't know. */}
+              {uploadedFiles.map((result, i) => (
+                <div key={`${result.filename}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--green-light)', border: '1px solid #B8D9CA', borderRadius: 'var(--radius)', animation: 'fadeUp .25s ease both' }}>
                   <span style={{ color: 'var(--green2)', fontSize: 13, flexShrink: 0 }}>✓</span>
-                  <span style={{ fontSize: 13, fontWeight: 500, flex: 1, color: 'var(--ink2)' }}>
-                    {REPORT_CONFIG[type]?.label || 'Report'} — {result.rowCount.toLocaleString()} rows
-                  </span>
-                  {result.dateRange && (
-                    <span style={{ fontSize: 11, color: 'var(--ink4)' }}>
-                      {result.dateRange.start} – {result.dateRange.end}
+                  <span style={{ fontSize: 13, fontWeight: 500, flex: 1, color: 'var(--ink2)', minWidth: 0 }}>
+                    <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {result.filename}
                     </span>
-                  )}
+                    <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--ink4)' }}>
+                      {REPORT_CONFIG[result.reportType]?.label || 'Format not recognized'}
+                      {' · '}{result.rowCount.toLocaleString()} {result.rowCount === 1 ? 'row' : 'rows'}
+                      {result.dateRange && ` · ${result.dateRange.start} – ${result.dateRange.end}`}
+                    </span>
+                  </span>
                 </div>
               ))}
             </div>
