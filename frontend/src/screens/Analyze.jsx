@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 import { DEMO_SCAN_STEPS } from '../lib/demoData.js';
+import { ANALYZABLE_REPORTS, REPORT_LABELS } from '../lib/csvParser.js';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -23,10 +24,12 @@ export default function Analyze({ onComplete, alreadyDone }) {
 
     const uploads = portfolioData?.uploads || [];
 
-    // Merge every upload that matches the first one's report type — two ledgers
-    // covering different years are one portfolio. Files of a different shape are
-    // left out rather than blended into meaningless totals.
-    const primary = uploads[0];
+    // Analyze the report Beacon reads best. A General Ledger wins even if it was
+    // dropped in second, so file order never decides which numbers the owner sees.
+    const primary = uploads.find(u => ANALYZABLE_REPORTS.includes(u.reportType)) || uploads[0];
+
+    // Merge every upload of the same type — two ledgers covering different years
+    // are one portfolio. Other reports are set aside rather than blended in.
     const merged = uploads.filter(u => u.reportType === primary?.reportType);
     const rows = merged.flatMap(u => u.data);
     skippedRef.current = uploads.filter(u => u.reportType !== primary?.reportType);
@@ -41,16 +44,25 @@ export default function Analyze({ onComplete, alreadyDone }) {
           .then(data => {
             analysisResultRef.current = data?.isRealData ? data : null;
 
+            // Say what powered the numbers. A file we set aside is acknowledged
+            // by name — never silently dropped — but it isn't framed as a failure.
             const messages = [];
+            const label = u => REPORT_LABELS[u.reportType] || REPORT_LABELS.unknown;
+
             if (data && !data.isRealData) {
-              const name = merged.length === 1 ? merged[0].filename : `${merged.length} files`;
-              messages.push(`Couldn't read ${name}. ${data.readError} Showing sample data instead.`);
+              messages.push(
+                `Analyzed ${merged.length === 1 ? merged[0].filename : `${merged.length} files`}, but couldn't find the numbers. ${data.readError} Showing sample data below so you can still explore.`
+              );
             } else if (merged.length > 1) {
-              messages.push(`Combined ${merged.length} files into one portfolio.`);
+              messages.push(`Analyzed ${merged.length} ${label(primary)} files together as one portfolio.`);
             }
+
             for (const s of skippedRef.current) {
-              messages.push(`Skipped ${s.filename} — it's a different report type than ${primary.filename}.`);
+              messages.push(
+                `${label(s)} noted — Beacon works from the ${label(primary)}, which carries the transaction detail behind these numbers.`
+              );
             }
+
             if (messages.length) setNotice(messages.join(' '));
 
             return analysisResultRef.current;

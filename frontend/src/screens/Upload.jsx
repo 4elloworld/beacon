@@ -2,12 +2,15 @@ import { useState, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext.jsx';
 import { parseCSV } from '../lib/csvParser.js';
 
+// `soon` marks a report Beacon accepts but does not analyze yet. Listing them
+// shows where the product is going; the marker keeps that from reading as a
+// promise the upload screen doesn't keep.
 const REPORT_CONFIG = {
   general_ledger:       { label: 'General Ledger',       required: true,  desc: 'Expense ratios · Vendor anomalies · Duplicate detection · Cash flow trends' },
-  income_register:      { label: 'Income Register',      required: false, desc: 'Exact rent collected vs expected · Partial payment detection' },
-  rent_roll:            { label: 'Rent Roll',             required: false, desc: 'Lease expiry countdown · Security deposit tracker' },
-  owner_expense_report: { label: 'Owner Expense Report', required: false, desc: 'Full vendor name visibility · Expense category breakdown' },
-  cash_flow_detail:     { label: 'Cash Flow Detail',     required: false, desc: 'Monthly net by property · Distribution verification' },
+  income_register:      { label: 'Income Register',      required: false, soon: true, desc: 'Exact rent collected vs expected · Partial payment detection' },
+  rent_roll:            { label: 'Rent Roll',             required: false, soon: true, desc: 'Lease expiry countdown · Security deposit tracker' },
+  owner_expense_report: { label: 'Owner Expense Report', required: false, soon: true, desc: 'Full vendor name visibility · Expense category breakdown' },
+  cash_flow_detail:     { label: 'Cash Flow Detail',     required: false, soon: true, desc: 'Monthly net by property · Distribution verification' },
 };
 
 export default function Upload({ onNext }) {
@@ -122,8 +125,15 @@ export default function Upload({ onNext }) {
                       <div style={{ fontSize: 12, fontWeight: 600, color: found ? 'var(--green2)' : config.required ? 'var(--gold-dark)' : 'var(--ink2)', flex: 1 }}>
                         {config.label}
                       </div>
-                      {found && <span className="pill green" style={{ fontSize: 9, padding: '1px 5px' }}><span className="pdot" />Uploaded</span>}
+                      {found && (
+                        <span className="pill green" style={{ fontSize: 9, padding: '1px 5px' }}>
+                          <span className="pdot" />{config.soon ? 'Received' : 'Uploaded'}
+                        </span>
+                      )}
                       {!found && config.required && <span className="pill gold" style={{ fontSize: 9, padding: '1px 5px' }}><span className="pdot" />Required</span>}
+                      {!found && config.soon && (
+                        <span style={{ fontSize: 9, color: 'var(--ink4)', fontStyle: 'italic', flexShrink: 0 }}>soon</span>
+                      )}
                     </div>
                     <div style={{ fontSize: 11, color: 'var(--ink4)', lineHeight: 1.4 }}>{config.desc}</div>
                   </div>

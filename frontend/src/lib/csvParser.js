@@ -26,12 +26,35 @@ const REPORT_PATTERNS = {
     ['category'],
     ['property'],
   ],
+  // AppFolio's Cash Flow Detail is a hierarchical report: indented section
+  // headers with transaction rows beneath them and a single signed Amount.
   cash_flow_detail: [
-    ['month'],
-    ['income'],
-    ['expenses', 'expense'],
-    ['net'],
+    ['account name'],
+    ['date'],
+    ['amount'],
+    ['property'],
   ],
+  // Property Performance is a per-property snapshot — no dates, and the figures
+  // live in per-account columns rather than a transaction amount.
+  property_performance: [
+    ['property address'],
+    ['units'],
+    ['management fee'],
+  ],
+};
+
+// Reports Beacon can analyze today. Anything else is accepted and acknowledged,
+// but not merged into the portfolio.
+export const ANALYZABLE_REPORTS = ['general_ledger'];
+
+export const REPORT_LABELS = {
+  general_ledger: 'General Ledger',
+  cash_flow_detail: 'Cash Flow Detail',
+  property_performance: 'Property Performance',
+  rent_roll: 'Rent Roll',
+  income_register: 'Income Register',
+  owner_expense_report: 'Owner Expense Report',
+  unknown: 'this file',
 };
 
 export function detectReportType(headers) {
