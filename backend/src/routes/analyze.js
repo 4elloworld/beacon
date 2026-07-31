@@ -10,6 +10,28 @@ const fmtMoney = n => (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleStr
 // Labels a ledger uses for structure rather than for a property.
 const LEDGER_MARKERS = /^(->|starting balance|ending balance|net change|beginning balance|total\b|subtotal\b|grand total\b)/i;
 
+// How much a property warrants the owner's attention, used to decide which ones
+// lead the list. Ratio alone is a poor guide: on a healthy portfolio the highest
+// ratios can be unremarkable while the real story — a property empty for months,
+// a chronic late payer — sits further down.
+const NOTABILITY_WEIGHTS = {
+  vacancy:           60,  // months of rent that will never be billed
+  late_fee_pattern:  35,
+  duplicate_charge:  30,
+  missing_vendor:    20,
+  invoice_splitting: 12,
+  late_mgmt_billing:  8,
+  duplicate_charge_minor: 3,
+};
+
+function notabilityOf(ratio, flags) {
+  let score = flags.reduce((s, f) => s + (NOTABILITY_WEIGHTS[f.flag_type] ?? 5), 0);
+  if (ratio > 1) score += 50;                       // spending more than it earns
+  else if (ratio > 0.85) score += 15;               // close to it
+  score += Math.min(ratio, 3) * 10;                 // rewards genuine extremes, capped
+  return score;
+}
+
 function isTransaction(row) {
   // Every real transaction is dated; section headers and totals are not.
   if (!row.date) return false;
@@ -87,8 +109,10 @@ router.post('/', async (req, res) => {
       note,
       late,
       flagCount: pFlags.length,
+      criticalCount: pFlags.filter(f => f.severity === 'critical').length,
+      notability: notabilityOf(ratio, pFlags),
     };
-  }).sort((a, b) => b.ratio - a.ratio);
+  }).sort((a, b) => b.notability - a.notability || b.ratio - a.ratio);
 
   properties.forEach((p, i) => { p.id = i; });
 

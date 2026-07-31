@@ -83,9 +83,13 @@ export default function Dashboard({ onKeyTakeaways }) {
   const [costsOpen, setCostsOpen] = useState(costsPanelOpen);
   const [isFlashing, setIsFlashing] = useState(false);
   const [showAllFlags, setShowAllFlags] = useState(false);
+  const [showAllProps, setShowAllProps] = useState(false);
   const prevAddedRef = useRef(0);
 
   const visibleFlags = showAllFlags ? FLAGS : FLAGS.slice(0, 12);
+  // Properties arrive ranked by how much they warrant attention, so the first
+  // dozen carry the story; the rest are a click away.
+  const visibleProps = showAllProps ? PROPERTIES : PROPERTIES.slice(0, 12);
   // A bar per property stops being readable past ~14; show the worst ratios.
   const chartProps = PROPERTIES.length > 14 ? PROPERTIES.slice(0, 14) : PROPERTIES;
 
@@ -319,7 +323,7 @@ export default function Dashboard({ onKeyTakeaways }) {
         <div className="card-head">
           <span className="card-label">
             Property P&amp;L — rent vs expenses
-            {chartProps.length < PROPERTIES.length && ` (top ${chartProps.length} by expense ratio)`}
+            {chartProps.length < PROPERTIES.length && ` (${chartProps.length} most notable)`}
           </span>
           <span style={{ fontSize: 11, color: lossCount > 0 ? 'var(--red)' : 'var(--green2)' }}>
             {lossCount > 0
@@ -358,10 +362,14 @@ export default function Dashboard({ onKeyTakeaways }) {
       <div className="card">
         <div className="card-head">
           <span className="card-label">Property health scores</span>
-          <span style={{ fontSize: 11, color: 'var(--ink4)' }}>hover to conceal · click to explore</span>
+          <span style={{ fontSize: 11, color: 'var(--ink4)' }}>
+            {PROPERTIES.length > visibleProps.length
+              ? `${visibleProps.length} most notable of ${PROPERTIES.length}`
+              : 'hover to conceal · click to explore'}
+          </span>
         </div>
         <div className="prop-grid">
-          {PROPERTIES.map(p => {
+          {visibleProps.map(p => {
             const addr = getAddr(p);
             const ratio = Math.round((p.exp / p.rent) * 100);
             const statusPill = { red: <span className="pill red"><span className="pdot" />Critical</span>, amber: <span className="pill amber"><span className="pdot" />Needs attention</span>, green: <span className="pill green"><span className="pdot" />Good</span> }[p.status];
@@ -401,6 +409,15 @@ export default function Dashboard({ onKeyTakeaways }) {
             );
           })}
         </div>
+        {PROPERTIES.length > 12 && (
+          <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+            <button className="btn sm" onClick={() => setShowAllProps(s => !s)}>
+              {showAllProps
+                ? 'Show the 12 most notable'
+                : `Show all ${PROPERTIES.length} properties`}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Anomaly flags */}
