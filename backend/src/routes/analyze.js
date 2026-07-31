@@ -15,6 +15,7 @@ const LEDGER_MARKERS = /^(->|starting balance|ending balance|net change|beginnin
 // ratios can be unremarkable while the real story — a property empty for months,
 // a chronic late payer — sits further down.
 const NOTABILITY_WEIGHTS = {
+  no_rent_recorded:  70,  // earning nothing while still costing money
   vacancy:           60,  // months of rent that will never be billed
   late_fee_pattern:  35,
   duplicate_charge:  30,
@@ -118,7 +119,9 @@ router.post('/', async (req, res) => {
 
   const totalRent = properties.reduce((s, p) => s + p.rent, 0);
   const totalExpenses = properties.reduce((s, p) => s + p.exp, 0);
-  const propertiesOverBudget = properties.filter(p => p.ratio > 1).length;
+  // Spend against income, not the ratio — ratio is 0 when rent is 0, which
+  // would quietly exclude a property earning nothing.
+  const propertiesOverBudget = properties.filter(p => p.exp > p.rent).length;
 
   const dates = cleaned.map(r => r.date).filter(Boolean).sort((a, b) => a - b);
   const dateRange = fmtRange(dates);
@@ -147,7 +150,7 @@ router.post('/', async (req, res) => {
       type: propertiesOverBudget > 0 ? 'warn' : 'ok',
       label: 'Calculating expense ratios',
       sub: propertiesOverBudget > 0
-        ? `${propertiesOverBudget} of ${properties.length} above 100% — expenses exceed rent`
+        ? `${propertiesOverBudget} of ${properties.length} ${propertiesOverBudget === 1 ? 'is' : 'are'} spending more than they collect`
         : `Portfolio running at ${baseExpenseRatio}% expense ratio`,
     },
     {

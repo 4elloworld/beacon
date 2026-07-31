@@ -138,6 +138,22 @@ export function runAnomalyDetection(rows) {
       rentByMonth[mk] = (rentByMonth[mk] || 0) + t.amountIn;
     }
     const months = Object.keys(rentByMonth).sort();
+
+    // No rent at all, yet costs are still being incurred. The gap rule below
+    // looks between months that had rent, so it cannot see this case — which is
+    // the most complete version of the thing it exists to find.
+    if (months.length === 0 && expenses.length > 0) {
+      const spent = expenses.reduce((s, t) => s + t.amountOut, 0);
+      const span = new Set(txns.map(t => monthKey(t.date)).filter(Boolean)).size;
+      flags.push({
+        flag_type: 'no_rent_recorded',
+        severity: 'critical',
+        property,
+        title: `${label} — no rent recorded in ${span} ${span === 1 ? 'month' : 'months'} of activity`,
+        detail: `$${Math.round(spent).toLocaleString()} spent with nothing collected against it. If this was sold, transferred, or is being held, it is worth confirming why it is still on the books.`,
+      });
+    }
+
     for (let i = 1; i < months.length; i++) {
       const expected = nextMonth(months[i - 1]);
       if (months[i] === expected) continue;

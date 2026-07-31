@@ -25,6 +25,7 @@ export function buildInsights(analysis, costs = null) {
   if (!analysis?.isRealData || !analysis.properties?.length) return null;
 
   const { properties, flags = [], propertyCount, totalRent, totalExpenses, baseExpenseRatio } = analysis;
+  // Same test the scan step uses, so the two screens can't disagree.
   const loss = properties.filter(p => p.exp > p.rent);
   const worst = properties[0];
   const dupes = countByType(flags, 'duplicate_charge');
