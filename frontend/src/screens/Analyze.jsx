@@ -7,6 +7,8 @@ const API_URL = import.meta.env.VITE_API_URL || '';
 export default function Analyze({ onComplete, alreadyDone }) {
   const { portfolioData, analysisResults, setAnalysisResults } = useApp();
   const analysisResultRef = useRef(null);
+  const skippedRef = useRef([]);
+  const [notice, setNotice] = useState(null);
 
   const doneSteps = analysisResults?.scanSteps || DEMO_SCAN_STEPS;
 
@@ -20,15 +22,37 @@ export default function Analyze({ onComplete, alreadyDone }) {
     if (alreadyDone) return; // already ran — don't re-animate
 
     const uploads = portfolioData?.uploads || [];
+
+    // Merge every upload that matches the first one's report type — two ledgers
+    // covering different years are one portfolio. Files of a different shape are
+    // left out rather than blended into meaningless totals.
+    const primary = uploads[0];
+    const merged = uploads.filter(u => u.reportType === primary?.reportType);
+    const rows = merged.flatMap(u => u.data);
+    skippedRef.current = uploads.filter(u => u.reportType !== primary?.reportType);
+
     const analysis = uploads.length > 0
       ? fetch(`${API_URL}/api/analyze`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rows: uploads[0].data }),
+          body: JSON.stringify({ rows }),
         })
           .then(r => (r.ok ? r.json() : null))
           .then(data => {
             analysisResultRef.current = data?.isRealData ? data : null;
+
+            const messages = [];
+            if (data && !data.isRealData) {
+              const name = merged.length === 1 ? merged[0].filename : `${merged.length} files`;
+              messages.push(`Couldn't read ${name}. ${data.readError} Showing sample data instead.`);
+            } else if (merged.length > 1) {
+              messages.push(`Combined ${merged.length} files into one portfolio.`);
+            }
+            for (const s of skippedRef.current) {
+              messages.push(`Skipped ${s.filename} — it's a different report type than ${primary.filename}.`);
+            }
+            if (messages.length) setNotice(messages.join(' '));
+
             return analysisResultRef.current;
           })
           .catch(() => null)
@@ -74,6 +98,17 @@ export default function Analyze({ onComplete, alreadyDone }) {
     <div>
       <h2 className="serif" style={{ fontSize: 32, marginBottom: 8, fontWeight: 400 }}>Analyzing your portfolio</h2>
       <p style={{ color: 'var(--ink3)', marginBottom: 28, fontSize: 14 }}>Finding the story your numbers have been trying to tell you.</p>
+
+      {notice && scanDone && (
+        <div style={{
+          background: 'var(--gold-light)', border: '1px solid var(--gold)', borderRadius: 8,
+          padding: '10px 14px', marginBottom: 16, fontSize: 12.5, color: 'var(--ink2)',
+          display: 'flex', alignItems: 'flex-start', gap: 8, animation: 'fadeUp .3s ease both',
+        }}>
+          <span style={{ fontSize: 14, lineHeight: 1.3 }}>◆</span>
+          <span>{notice}</span>
+        </div>
+      )}
 
       <div className="card">
         <div className="card-body">

@@ -125,10 +125,24 @@ router.post('/', async (req, res) => {
     },
   ];
 
+  // Finding property names is not enough to call an export readable — a summary
+  // report can yield rows of addresses with no parseable money in them, which
+  // would otherwise render as a confident portfolio of zeroes. Require both.
+  const hasMoney = totalRent > 0 || totalExpenses > 0;
+  const readable = properties.length > 0 && hasMoney;
+
+  let readError = null;
+  if (!readable) {
+    readError = properties.length === 0
+      ? "No property names were found in this file. Beacon needs a column identifying the property for each row."
+      : `Found ${properties.length} ${properties.length === 1 ? 'property' : 'properties'} but no readable amounts. Beacon needs per-transaction amounts — a Debit/Credit pair, or a single signed Amount column. Summary reports that put figures in per-account columns aren't supported yet.`;
+  }
+
   res.json({
-    // No identifiable properties means we could not read this export; the UI
-    // falls back to the sample portfolio rather than showing an empty one.
-    isRealData: properties.length > 0,
+    // The UI falls back to the sample portfolio when this is false, and shows
+    // readError so the person knows why rather than seeing zeroes as fact.
+    isRealData: readable,
+    readError,
     propertyCount: properties.length,
     rowCount: cleaned.length,
     dateRange,
