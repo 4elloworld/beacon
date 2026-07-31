@@ -191,7 +191,9 @@ export default function Dashboard({ onKeyTakeaways }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h2 className="serif" style={{ fontSize: 32, marginBottom: 4, fontWeight: 400 }}>Your portfolio</h2>
-          <div style={{ fontSize: 13, color: 'var(--ink4)' }}>{KPIS.propertyCount} properties · {KPIS.dateRange}</div>
+          <div style={{ fontSize: 13, color: 'var(--ink4)' }}>
+            {KPIS.propertyCount} {KPIS.propertyCount === 1 ? 'property' : 'properties'} · {KPIS.dateRange}
+          </div>
         </div>
         <div className="btn-row">
           <button className="btn sm" onClick={toggleGlobalConceal}>
