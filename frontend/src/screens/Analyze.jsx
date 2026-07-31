@@ -5,6 +5,17 @@ import { REPORT_PREFERENCE, REPORT_LABELS } from '../lib/csvParser.js';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
+// Shown while a real analysis is still running. Same steps, no figures — the
+// numbers arrive with the result rather than being borrowed from the sample.
+const PENDING_SCAN_STEPS = [
+  { ico: 'GL', label: 'Reading transaction data',   sub: 'Parsing your export…',                 type: 'ok' },
+  { ico: 'AD', label: 'Mapping property addresses', sub: 'Grouping transactions by property…',   type: 'ok' },
+  { ico: '%',  label: 'Calculating expense ratios', sub: 'Comparing spend against rent…',        type: 'ok' },
+  { ico: '!',  label: 'Scanning for anomalies',     sub: 'Checking for duplicates and gaps…',    type: 'ok' },
+  { ico: '?',  label: 'Checking occupancy gaps',    sub: 'Looking for months without rent…',     type: 'ok' },
+  { ico: '✓',  label: 'Analysis complete',          sub: 'Preparing your dashboard…',            type: 'ok' },
+];
+
 export default function Analyze({ onComplete, alreadyDone }) {
   const { portfolioData, analysisResults, setAnalysisResults } = useApp();
   const analysisResultRef = useRef(null);
@@ -84,19 +95,24 @@ export default function Analyze({ onComplete, alreadyDone }) {
           .catch(() => null)
       : Promise.resolve(null);
 
-    // Reveal steps one at a time. Steps come from the real analysis once it lands;
-    // until then the demo steps stand in so the animation can start immediately.
+    // Reveal steps one at a time. Real figures replace these the moment the
+    // analysis lands; until then a file being analyzed shows the work in
+    // progress rather than the sample portfolio's numbers, which would put "842
+    // rows across 6 properties" in front of someone who uploaded neither.
+    const placeholder = uploads.length > 0 ? PENDING_SCAN_STEPS : DEMO_SCAN_STEPS;
+
     let i = 0;
     let cancelled = false;
     const interval = setInterval(() => {
-      const steps = analysisResultRef.current?.scanSteps || DEMO_SCAN_STEPS;
+      const steps = analysisResultRef.current?.scanSteps || placeholder;
       if (cancelled) return;
       if (i < steps.length) {
-        const step = steps[i];
-        setVisibleSteps(prev => [...prev, step]);
-        setProgress(Math.round(((i + 1) / steps.length) * 100));
-        setStatusText(step.label + '…');
         i++;
+        // Rebuilt from the current source rather than appended, so steps already
+        // on screen pick up real figures as soon as the analysis returns.
+        setVisibleSteps(steps.slice(0, i));
+        setProgress(Math.round((i / steps.length) * 100));
+        setStatusText(steps[i - 1].label + '…');
       } else {
         clearInterval(interval);
         analysis.finally(() => {
