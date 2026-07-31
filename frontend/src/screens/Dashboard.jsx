@@ -17,22 +17,39 @@ const compact = n => {
   return '$' + Math.round(v).toLocaleString();
 };
 
-// Annual estimates for each cost type (portfolio-wide)
-const COST_ESTIMATES_ANNUAL = {
-  property_tax:  32000,
-  insurance:     12000,
-  mortgage:      0,       // no estimate — must be entered manually
-  landscaping:   9000,
-  reserves:      9372,
+// Per-property annual estimates, scaled to the portfolio actually loaded.
+const COST_ESTIMATES_PER_PROPERTY = {
+  property_tax: 5333,
+  insurance:    2000,
+  mortgage:     0,     // no estimate — must be entered manually
+  landscaping:  1500,
 };
 
-const COST_ITEMS = [
-  { type: 'property_tax', label: 'Property taxes',          impact: '~$32K/yr est.',  hasEstimate: true },
-  { type: 'insurance',    label: 'Landlord insurance',      impact: '~$12K/yr est.',  hasEstimate: true },
-  { type: 'mortgage',     label: 'Mortgage / debt service', impact: 'varies',         hasEstimate: false },
-  { type: 'landscaping',  label: 'Lawn & landscaping',      impact: '~$9K/yr est.',   hasEstimate: true },
-  { type: 'reserves',     label: 'Capital reserves (5%)',   impact: '~$9,372/yr est.', hasEstimate: true },
-];
+// Reserves are conventionally a share of rent rather than a per-door figure.
+const RESERVE_RATE = 0.05;
+
+function estimatesFor(propertyCount, rentCollected) {
+  const n = Math.max(propertyCount || 1, 1);
+  return {
+    property_tax: COST_ESTIMATES_PER_PROPERTY.property_tax * n,
+    insurance:    COST_ESTIMATES_PER_PROPERTY.insurance * n,
+    mortgage:     0,
+    landscaping:  COST_ESTIMATES_PER_PROPERTY.landscaping * n,
+    reserves:     Math.round((rentCollected || 0) * RESERVE_RATE),
+  };
+}
+
+const shortMoney = n => (n >= 1000 ? `$${Math.round(n / 1000)}K` : `$${Math.round(n)}`);
+
+function costItemsFor(est) {
+  return [
+    { type: 'property_tax', label: 'Property taxes',          impact: `~${shortMoney(est.property_tax)}/yr est.`, hasEstimate: true },
+    { type: 'insurance',    label: 'Landlord insurance',      impact: `~${shortMoney(est.insurance)}/yr est.`,    hasEstimate: true },
+    { type: 'mortgage',     label: 'Mortgage / debt service', impact: 'varies',                                    hasEstimate: false },
+    { type: 'landscaping',  label: 'Lawn & landscaping',      impact: `~${shortMoney(est.landscaping)}/yr est.`,  hasEstimate: true },
+    { type: 'reserves',     label: 'Capital reserves (5%)',   impact: `~${shortMoney(est.reserves)}/yr est.`,     hasEstimate: true },
+  ];
+}
 
 const COST_LABELS = {
   property_tax: 'taxes',
@@ -42,7 +59,7 @@ const COST_LABELS = {
   reserves: 'reserves',
 };
 
-function computeAddedCosts(costState) {
+function computeAddedCosts(costState, estimates) {
   let total = 0;
   const addedTypes = [];
   for (const [type, state] of Object.entries(costState)) {
@@ -50,7 +67,7 @@ function computeAddedCosts(costState) {
     if (state.mode === 'manual' && state.value) {
       amt = parseFloat(state.value) || 0;
     } else if (state.mode === 'est') {
-      amt = COST_ESTIMATES_ANNUAL[type] || 0;
+      amt = estimates[type] || 0;
     }
     if (amt > 0) { total += amt; addedTypes.push(type); }
   }
@@ -115,8 +132,10 @@ export default function Dashboard({ onKeyTakeaways }) {
   // A bar per property stops being readable past ~14; show the worst ratios.
   const chartProps = PROPERTIES.length > 14 ? PROPERTIES.slice(0, 14) : PROPERTIES;
 
-  // Compute added costs
-  const { total: addedCosts, addedTypes } = computeAddedCosts(costState);
+  // Compute added costs against estimates sized to this portfolio
+  const estimates = estimatesFor(KPIS.propertyCount, KPIS.rentCollected);
+  const COST_ITEMS = costItemsFor(estimates);
+  const { total: addedCosts, addedTypes } = computeAddedCosts(costState, estimates);
   const hasCosts = addedCosts > 0;
 
   // Flash KPI cards when costs change
